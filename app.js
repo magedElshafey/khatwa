@@ -158,8 +158,8 @@ function viewToday() {
     let noteCount = group('learning').length;
     let s = nextSession();
     let yesSmoke = sm?.data?.count === 0;
-    let hCount = hab ? Object.values(hab.data).filter(Boolean).length : 0;
-    let steps = [{ p: 'learning', title: 'الجلسة الجاية', subtitle: s?.title || 'كل الجلسات اتسجلت! (راجع معايير الانتقال)', icon: '⌘', label: s ? 'افتح الجلسة' : 'راجع التقدم' }, { p: 'english', title: '10 دقايق إنجليزي', subtitle: eng ? 'سجلت ممارستك النهارده' : 'اسمع أو اتكلم أو اكتب 10 دقايق', icon: 'Aa', label: eng ? 'شوف التسجيل' : 'ابدأ' }, { p: 'smoking', title: 'متابعة الإقلاع', subtitle: sm ? (yesSmoke ? 'سجلت يوم من غير تدخين' : `سجلت ${F(n(sm.data.count))} سيجارة`) : 'لسه مسجلتش النهارده', icon: '♧', label: 'افتح' }, { p: 'spiritual', title: 'عاداتك الروحية', subtitle: hab ? `سجلت ${hCount} من 8 بنود` : 'سجل اللي حصل النهارده', icon: '☼', label: 'افتح' }];
+    let hCount = hab ? prayerItems.filter(([key])=>Boolean(hab.data[key])).length : 0;
+    let steps = [{ p: 'learning', title: 'الجلسة الجاية', subtitle: s?.title || 'كل الجلسات اتسجلت! (راجع معايير الانتقال)', icon: '⌘', label: s ? 'افتح الجلسة' : 'راجع التقدم' }, { p: 'english', title: '10 دقايق إنجليزي', subtitle: eng ? 'سجلت ممارستك النهارده' : 'اسمع أو اتكلم أو اكتب 10 دقايق', icon: 'Aa', label: eng ? 'شوف التسجيل' : 'ابدأ' }, { p: 'smoking', title: 'متابعة الإقلاع', subtitle: sm ? (yesSmoke ? 'سجلت يوم من غير تدخين' : `سجلت ${F(n(sm.data.count))} سيجارة`) : 'لسه مسجلتش النهارده', icon: '♧', label: 'افتح' }, { p: 'spiritual', title: 'عاداتك الروحية', subtitle: hab ? `سجلت ${hCount} من ${prayerItems.length} بنود` : 'سجل اللي حصل النهارده', icon: '☼', label: 'افتح' }];
     let cards = steps.map(x => `<div class="card soft"><div class="priority"><span class="circle">${x.icon}</span><div style="flex:1"><h3>${x.title}</h3><p>${E(x.subtitle)}</p>${action(x.label, 'nav', `data-page="${x.p}"`, 'btn sm')}</div></div></div>`).join('');
     let learnPct = pct(completedSessions(), allSessions().length);
     let smokeZero = group('smoking').filter(x => x.data?.count === 0 && (!state.settings.smoking || x.date >= state.settings.smoking.start)).length;
@@ -311,12 +311,8 @@ async function handleSubmit(e) {
             let id = form.dataset.key || '';
             await save('business', state.date, { status: get('status'), minutes: val('minutes'), notes: get('notes'), step: id }, `biz-${id}`);
         }
-        if (kind === 'smoke-setup') {
-            if (val('avg') <= 0 || val('packSize') <= 0 || val('packPrice') < 0)
-                throw Error('راجع بيانات العلبة وعدد السجاير');
-            await saveSettings({ ...state.settings, smoking: { avg: val('avg'), packSize: val('packSize'), packPrice: val('packPrice'), start: get('start') } });
-            smokeEditing = false;
-        }
+        if(kind==='smoke-setup'){const quitAt=get('quitAt');if(val('avg')<=0||val('packSize')<=0||val('packPrice')<0)throw Error('راجع بيانات العلبة وعدد السجاير');if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(quitAt)||Number.isNaN(new Date(quitAt).getTime()))throw Error('حدد تاريخ ووقت بداية صحيحين');await saveSettings({...state.settings,smoking:{avg:val('avg'),packSize:val('packSize'),packPrice:val('packPrice'),start:quitAt.slice(0,10),quitAt}});smokeEditing=false;}
+
         if (kind === 'smoke') {
             if (get('count') === '' || val('count') < 0)
                 throw Error('اكتب العدد الفعلي حتى لو صفر');
@@ -360,7 +356,8 @@ async function handleSubmit(e) {
             await save('social', date, { name: get('name'), minutes: val('minutes') });
             state.date = date;
         }
-        if (kind === 'routine-add') {
+        if(kind==='sleep-add'){const label=get('name');if(!label)throw Error('اكتب اسم الخطوة');if(sleepSteps().some(x=>x.label.toLowerCase()===label.toLowerCase()))throw Error('الخطوة موجودة بالفعل');await saveSettings({...state.settings,sleepRoutine:[...sleepSteps(),{id:'sleep-'+uid(),label}]});}
+if (kind === 'routine-add') {
             let v = get('name');
             if (!v)
                 throw Error('اكتب اسم العادة');
@@ -403,7 +400,8 @@ async function handleChange(e) {
             render();
             notice('اتسجل اختيارك.');
         }
-        if (t.dataset.routine !== undefined) {
+        if(t.dataset.sleep!==undefined){const step=sleepSteps().find(x=>x.id===t.dataset.sleep);if(!step)return;const old=row('sleep-'+state.date)?.data||{};await save('sleep',state.date,{...old,steps:{...(old.steps||{}),[step.id]:t.checked}},'sleep-'+state.date);render();notice('اتسجل اختيارك.');return;}
+if (t.dataset.routine !== undefined) {
             let key = state.settings.routine[Number(t.dataset.routine)];
             if (key === undefined)
                 return;
@@ -480,7 +478,9 @@ async function handleClick(e) {
             notice('اتسجل اليوم من غير تدخين.');
             return;
         }
-        if(a==='routine-rename'){let i=Number(el.dataset.index),old=state.settings.routine[i];if(old===undefined)return;let name=window.prompt('اسم العادة الجديد:',old)?.trim();if(!name||name===old)return;if(state.settings.routine.includes(name))throw Error('العادة موجودة بالفعل');await saveSettings({...state.settings,routine:state.settings.routine.map((item,index)=>index===i?name:item)});let d=row('routine-'+state.date);if(d){let data={...d.data};data[encodeURIComponent(name)]=data[encodeURIComponent(old)]||false;delete data[encodeURIComponent(old)];await save('routine',d.date,data,d.id);}render();return;}
+        if(a==='sleep-rename'){const id=el.dataset.id||'';const original=sleepSteps().find(x=>x.id===id);if(!original)return;const response=window.prompt('اسم الخطوة:',original.label);if(response===null)return;const label=response.trim();if(!label)throw Error('اسم الخطوة مطلوب');if(sleepSteps().some(x=>x.id!==id&&x.label.toLowerCase()===label.toLowerCase()))throw Error('الخطوة موجودة بالفعل');await saveSettings({...state.settings,sleepRoutine:sleepSteps().map(x=>x.id===id?{...x,label}:x)});render();return;}
+if(a==='sleep-remove'){const id=el.dataset.id||'';if(!sleepSteps().some(x=>x.id===id))return;if(!confirm('تشيل الخطوة من الروتين؟ تسجيلاتها القديمة هتفضل محفوظة.'))return;await saveSettings({...state.settings,sleepRoutine:sleepSteps().filter(x=>x.id!==id)});render();return;}
+if(a==='routine-rename'){let i=Number(el.dataset.index),old=state.settings.routine[i];if(old===undefined)return;let name=window.prompt('اسم العادة الجديد:',old)?.trim();if(!name||name===old)return;if(state.settings.routine.includes(name))throw Error('العادة موجودة بالفعل');await saveSettings({...state.settings,routine:state.settings.routine.map((item,index)=>index===i?name:item)});let d=row('routine-'+state.date);if(d){let data={...d.data};data[encodeURIComponent(name)]=data[encodeURIComponent(old)]||false;delete data[encodeURIComponent(old)];await save('routine',d.date,data,d.id);}render();return;}
         if (a === 'routine-remove') {
             let index = Number(el.dataset.index), r = state.settings.routine;
             if (!confirm('تشيل العادة من الروتين؟ التسجيلات القديمة هتفضل محفوظة.'))
