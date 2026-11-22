@@ -199,3 +199,42 @@ html{scrollbar-gutter:stable}
  .sleep-step-actions{padding-inline-start:30px}
  table td .btn + .btn{margin-inline-start:12px}
 }
+
+
+/* Evidence-led quitting progress: pleasant, readable and low-motion. */
+.smoke-data-notice,.smoke-log-reconcile{font-size:12px;line-height:1.85;color:var(--muted);background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:12px 0}
+.smoke-data-notice strong,.smoke-log-reconcile strong{color:var(--ink)}
+.smoke-health-section{margin:22px 0}
+.smoke-health-highlight{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:22px;border:1px solid var(--line);border-radius:17px;background:linear-gradient(115deg,var(--paper),var(--mint-light));box-shadow:var(--shadow)}
+.smoke-health-highlight>div:first-child{flex:1;min-width:0}
+.smoke-health-eyebrow{display:block;color:var(--mint);font-size:11px;font-weight:800;margin-bottom:7px}
+.smoke-health-highlight h3{margin:0 0 8px;color:var(--ink);font-size:19px;line-height:1.5}
+.smoke-health-highlight p{color:var(--muted);font-size:12px;line-height:1.9;margin:0}
+.smoke-health-next{flex:0 0 190px;display:flex;flex-direction:column;gap:5px;padding:14px 17px;border:1px solid var(--line);border-radius:13px;background:var(--paper)}
+.smoke-health-next>span{font-size:11px;color:var(--muted)}
+.smoke-health-next strong{font-size:14px;color:var(--ink)}
+.smoke-health-next small{font-size:11px;color:var(--mint)}
+.smoke-health-details{margin-top:12px;background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.smoke-health-details>summary{display:flex;align-items:center;min-height:48px;list-style:none;padding:12px 17px;font-size:13px;font-weight:800;color:var(--ink);cursor:pointer;border-bottom:1px solid transparent}
+.smoke-health-details>summary::-webkit-details-marker{display:none}
+.smoke-health-details>summary::marker{content:""}
+.smoke-health-details>summary::after{content:"⌄";margin-inline-start:auto;font-size:20px;color:var(--mint);transform:rotate(0);transition:transform .2s ease}
+.smoke-health-details[open]>summary{border-color:var(--line)}
+.smoke-health-details[open]>summary::after{transform:rotate(180deg)}
+.smoke-health-timeline{padding:15px 18px 18px}
+.smoke-health-stage{display:flex;align-items:stretch;gap:14px}
+.smoke-stage-dot{position:relative;flex:0 0 15px;width:15px;margin-top:7px}
+.smoke-stage-dot::before{content:"";display:block;width:12px;height:12px;border-radius:50%;border:2px solid var(--line);background:var(--paper);position:relative;z-index:1}
+.smoke-stage-dot::after{content:"";position:absolute;top:15px;bottom:-5px;width:1px;background:var(--line);inset-inline-start:5px}
+.smoke-health-stage:last-child .smoke-stage-dot::after{display:none}
+.smoke-health-stage.is-reached .smoke-stage-dot::before{background:var(--mint);border-color:var(--mint)}
+.smoke-stage-body{flex:1;min-width:0;padding-bottom:19px}
+.smoke-stage-meta{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.smoke-stage-meta strong{font-size:12px;color:var(--mint)}
+.smoke-stage-meta span{font-size:10px;color:var(--muted)}
+.smoke-stage-body h4{margin:4px 0 5px;font-size:13px;color:var(--ink)}
+.smoke-stage-body p{margin:0 0 5px;font-size:12px;line-height:1.85;color:var(--muted)}
+.smoke-stage-body a{font-size:11px;font-weight:700;color:var(--blue);text-decoration:underline;text-underline-offset:3px}
+.smoke-health-disclaimer{font-size:11px;line-height:1.9;color:var(--muted);padding:4px 3px;margin:10px 0 0}
+@media(max-width:640px){.smoke-health-highlight{flex-direction:column;align-items:stretch;padding:16px;gap:13px}.smoke-health-next{flex:0 0 auto}.smoke-health-highlight h3{font-size:16px}.smoke-health-timeline{padding:13px}.smoke-health-stage{gap:8px}}
+@media(prefers-reduced-motion:reduce){.smoke-health-details>summary::after{transition:none}}
