@@ -36,6 +36,20 @@ assert(todayShell.includes('class="page-content"'),'page wrapper missing');
 assert(vm.runInContext('viewToday()',ctx).includes('today-priority-grid'),'Today spacing missing');
 assert(text('styles.css').includes('khotwa-page-enter'),'entry animation missing');
 assert(text('styles.css').includes('prefers-reduced-motion:reduce'),'reduced motion not supported');
+// Accordion regression: keep geometry stable and preserve the current open/closed state on render.
+assert(text('styles.css').includes('scrollbar-gutter:stable'),'scrollbar can shift the page width');
+assert(text('styles.css').includes('border-bottom:1px solid transparent'),'summary border is not reserved');
+assert(text('styles.css').includes('.sprint>summary::marker'),'native details marker is not normalized');
+assert(vm.runInContext('viewLearning()',ctx).includes('data-accordion-id="learning-'),'learning accordion IDs missing');
+assert(vm.runInContext('viewBusiness()',ctx).includes('data-accordion-id="business-'),'business accordion IDs missing');
+const beforeDetail={dataset:{accordionId:'learning-test'},open:false};
+const afterDetail={dataset:{accordionId:'learning-test'},open:true};
+const host={replaced:false,querySelectorAll(){return this.replaced?[afterDetail]:[beforeDetail];},querySelector(){return null;}};
+Object.defineProperty(host,'innerHTML',{set(){this.replaced=true;}});
+ctx.document.getElementById=()=>host;
+vm.runInContext("state.page='learning';lastRenderedPage='learning';render()",ctx);
+assert.equal(afterDetail.open,false,'accordion was reopened after a same-page render');
+
 
 let out=vm.runInContext(`state.settings.smoking={avg:20,packSize:20,packPrice:100,start:'2026-11-20'};state.rows=[{id:'smoke-2026-11-20',collection:'smoking',date:'2026-11-20',data:{count:0},updatedAt:''},{id:'smoke-2026-11-21',collection:'smoking',date:'2026-11-21',data:{count:5},updatedAt:''},{id:'smoke-2026-11-19',collection:'smoking',date:'2026-11-19',data:{count:0},updatedAt:''}];smokeMath()`,ctx);
 assert.equal(out.days,1);assert.equal(out.avoided,35);assert.equal(out.saved,175);
