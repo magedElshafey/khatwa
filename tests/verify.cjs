@@ -5,6 +5,7 @@ const ctx=vm.createContext({window:{},console,Date,Math,Number,String,Object,Arr
 vm.runInContext(text('roadmap-data.js'),ctx);
 vm.runInContext(text('experience.js'),ctx);
 vm.runInContext(text('nutrition.js'),ctx);
+vm.runInContext(text('smoking-insights.js'),ctx);
 const appPath=fs.existsSync(path.join(root,'dist','app.js'))?'dist/app.js':'app.js';
 vm.runInContext(text(appPath).replace(/void boot\(\);\s*$/,''),ctx);
 for(const fn of ['viewToday','viewLearning','viewEnglish','viewBusiness','viewSmoking','viewWorkout','viewNutrition','viewBody','viewSpiritual','viewRoutine','viewSleep','viewMoney','viewSocial','viewReview','viewSettings','viewMore']){
@@ -104,6 +105,7 @@ assert(setupHtml.includes('type="datetime-local"')&&setupHtml.includes('name="qu
 vm.runInContext("smokeEditing=false",ctx);
 assert(text('styles.css').includes('table td .btn + .btn'),'table actions need explicit gaps');
 assert.doesNotThrow(()=>new vm.Script(text('app.js')),'tracked browser app.js has a syntax error');
+assert.doesNotThrow(()=>new vm.Script(text('smoking-insights.js')),'milestone script has a syntax error');
 assert.doesNotThrow(()=>new vm.Script(text('sw.js')),'service worker source has a syntax error');
 const oldSpiritual=vm.runInContext("state.date='2026-11-22';state.rows=[{id:'spirit-2026-11-22',collection:'spiritual',date:'2026-11-22',data:{adhkar:true},updatedAt:''}];viewSpiritual()",ctx);
 assert(oldSpiritual.includes('أذكار الصباح')&&oldSpiritual.includes('أذكار المساء'),'separate adhkar missing');
@@ -118,9 +120,30 @@ const bedtimeIds=vm.runInContext('sleepSteps().map(x=>x.id)',ctx);
 assert.equal(new Set(bedtimeIds).size,bedtimeIds.length,'routine steps require stable unique IDs');
 assert(vm.runInContext("pageShell(viewSleep())",ctx).includes('روتين قبل النوم'),'bedtime module navigation missing');
 
+
+const insights=ctx.window.KhotwaSmokeInsights;
+assert(insights,'smoking insights helper not available');
+const since=Date.parse('2026-11-20T09:00:00');
+const quitConfig={avg:20,packSize:20,packPrice:100,quitAt:'2026-11-20T09:00',start:'2026-11-20'};
+const twentyOne=insights.estimate(quitConfig,since+21*60*60*1000);
+assert.equal(twentyOne.valid,true);
+assert.equal(twentyOne.cigarettes,18,'21 hours at 20/day should yield ~18 potential cigarettes');
+assert.equal(twentyOne.money,87.5,'time-proportional potential savings incorrect');
+assert.equal(twentyOne.reached.at(-1).hours,8,'8-hour milestone should be the latest after 21h');
+assert.equal(twentyOne.next.hours,48,'taste and smell is the next milestone after 21h');
+assert(insights.timeline(quitConfig,since+21*3600000).includes('المصدر: NHS'),'health timeline needs linked evidence');
+assert(insights.timeline(quitConfig,since+21*3600000).includes('المصدر: CDC'),'timeline must cite CDC');
+assert.equal(insights.estimate({...quitConfig,quitAt:'2026-12-01T08:00'},since).cigarettes,0,'future quit date should not create savings');
+assert.equal(insights.estimate({avg:20,start:'2026-11-20'},since).valid,false,'date-only config should not invent a timestamp');
+assert(text('scripts/build.cjs').includes("'smoking-insights.js'"),'Vercel must publish smoking insights JS');
+assert(text('sw.js').includes("'./smoking-insights.js'"),'PWA must cache smoking insights');
+let smokingScreen=vm.runInContext("state.settings.smoking={avg:20,packSize:20,packPrice:100,start:'2026-11-20',quitAt:'2026-11-20T09:00'};smokeEditing=false;viewSmoking()",ctx);
+assert(smokingScreen.includes('رحلة مبنية على العلم'),'health section missing from smoking screen');
+assert(smokingScreen.includes('بافتراض إنك ما دخّنتش'),'potential estimate must include disclaimer');
+
 let nu=vm.runInContext(`nutritionTotals([{data:{grams:200,calories:100,protein:5,carbs:20,satfat:1,unsatfat:2,otherfat:0}}])`,ctx);
 assert.equal(nu.calories,200);assert.equal(nu.protein,10);assert.equal(nu.carbs,40);
-for(const f of ['index.html','styles.css','experience.js','nutrition.js','app.js','roadmap-data.js','sw.js','manifest.webmanifest','assets/icon-192.png','assets/icon-512.png'])assert(fs.existsSync(path.join(root,f)),`missing ${f}`);
+for(const f of ['index.html','styles.css','experience.js','nutrition.js','smoking-insights.js','app.js','roadmap-data.js','sw.js','manifest.webmanifest','assets/icon-192.png','assets/icon-512.png'])assert(fs.existsSync(path.join(root,f)),`missing ${f}`);
 const m=JSON.parse(text('manifest.webmanifest'));assert(m.icons?.length>=2);
 console.log('✓ 16 views rendered, 144 learning units loaded, smoking/nutrition math correct, PWA assets present.');
 console.log('Note: Browser-based visual/offline interaction testing must still be done after HTTPS deployment.');

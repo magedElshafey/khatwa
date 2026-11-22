@@ -61,3 +61,9 @@ The records use stable IDs and updatedAt fields so a later authenticated backend
 - Bedtime routine has five simple starter steps, each optional, editable and saved by stable step ID for each selected date. You can add/rename/remove steps without deleting old records.
 - Smoking setup records local **date and time** in `settings.smoking.quitAt`, retaining the date-only `start` field for older backups. Partial start-day logs are not used to estimate full-day savings or avoided cigarettes.
 - Table Edit/Delete actions have consistent spacing. No storage migration and no automatic sharing.
+
+## Smoking progress and sourced recovery milestones
+
+- The 21-hour counter and health timeline read the user's locally stored `quitAt` timestamp. From `avg` cigarettes/day, the app shows *potential* avoided cigarettes and savings: `avg × elapsed hours / 24`, then multiplying by the configured per-cigarette cost. They are **theoretical, not verification of abstinence**. Daily logged actual results remain separate and missing days are never recorded as successful automatically.
+- Evidence milestones are illustrative population-level ranges, not personalized health measurements. Links to NHS, CDC and WHO are shown within the interface. The timeline works offline; links to sources need Internet.
+- Invalid or legacy date-only settings prompt the user to set an exact timestamp; no invented hour is used.
