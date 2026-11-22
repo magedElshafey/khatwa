@@ -6,6 +6,7 @@ vm.runInContext(text('roadmap-data.js'),ctx);
 vm.runInContext(text('experience.js'),ctx);
 vm.runInContext(text('nutrition.js'),ctx);
 vm.runInContext(text('smoking-insights.js'),ctx);
+vm.runInContext(text('cloud-sync.js'),ctx);
 const appPath=fs.existsSync(path.join(root,'dist','app.js'))?'dist/app.js':'app.js';
 vm.runInContext(text(appPath).replace(/void boot\(\);\s*$/,''),ctx);
 for(const fn of ['viewToday','viewLearning','viewEnglish','viewBusiness','viewSmoking','viewWorkout','viewNutrition','viewBody','viewSpiritual','viewRoutine','viewSleep','viewMoney','viewSocial','viewReview','viewSettings','viewMore']){
@@ -105,6 +106,7 @@ assert(setupHtml.includes('type="datetime-local"')&&setupHtml.includes('name="qu
 vm.runInContext("smokeEditing=false",ctx);
 assert(text('styles.css').includes('table td .btn + .btn'),'table actions need explicit gaps');
 assert.doesNotThrow(()=>new vm.Script(text('app.js')),'tracked browser app.js has a syntax error');
+assert.doesNotThrow(()=>new vm.Script(text('cloud-sync.js')),'cloud sync JS has a syntax error');
 assert.doesNotThrow(()=>new vm.Script(text('smoking-insights.js')),'milestone script has a syntax error');
 assert.doesNotThrow(()=>new vm.Script(text('sw.js')),'service worker source has a syntax error');
 const oldSpiritual=vm.runInContext("state.date='2026-11-22';state.rows=[{id:'spirit-2026-11-22',collection:'spiritual',date:'2026-11-22',data:{adhkar:true},updatedAt:''}];viewSpiritual()",ctx);
@@ -141,9 +143,20 @@ let smokingScreen=vm.runInContext("state.settings.smoking={avg:20,packSize:20,pa
 assert(smokingScreen.includes('رحلة مبنية على العلم'),'health section missing from smoking screen');
 assert(smokingScreen.includes('بافتراض إنك ما دخّنتش'),'potential estimate must include disclaimer');
 
+// Cloud remains off until the user enables synchronization after signing in.
+assert.equal(ctx.window.KhotwaCloud.isActive(),false,'Cloud sync must be opt-in');
+assert(ctx.window.KhotwaCloud.panel().includes('data-form="cloud-login"'),'login UI missing');
+assert(ctx.window.KhotwaCloud.panel().includes('data-form="cloud-signup"'),'signup UI missing');
+assert(text('index.html').includes('src="./cloud-sync.js"'),'cloud JS missing in entry');
+assert(text('scripts/build.cjs').includes("'cloud-sync.js'"),'cloud JS not packaged');
+assert(text('sw.js').includes("'./cloud-sync.js'"),'cloud JS not cached offline');
+assert(vm.runInContext('viewSettings()',ctx).includes('حسابك والمزامنة'),'cloud controls missing');
+const strippedPhoto=ctx.window.KhotwaCloud.sanitize({id:'body-x',date:'2026-11-22',collection:'body',data:{weight:80,photo:'data:image/jpeg;base64,private'}});
+assert.equal(strippedPhoto.data.photo,undefined,'private photo must stay local');
+assert.equal(strippedPhoto.data.weight,80,'normal values still synchronize');
 let nu=vm.runInContext(`nutritionTotals([{data:{grams:200,calories:100,protein:5,carbs:20,satfat:1,unsatfat:2,otherfat:0}}])`,ctx);
 assert.equal(nu.calories,200);assert.equal(nu.protein,10);assert.equal(nu.carbs,40);
-for(const f of ['index.html','styles.css','experience.js','nutrition.js','smoking-insights.js','app.js','roadmap-data.js','sw.js','manifest.webmanifest','assets/icon-192.png','assets/icon-512.png'])assert(fs.existsSync(path.join(root,f)),`missing ${f}`);
+for(const f of ['index.html','styles.css','experience.js','nutrition.js','smoking-insights.js','cloud-sync.js','app.js','roadmap-data.js','sw.js','manifest.webmanifest','assets/icon-192.png','assets/icon-512.png'])assert(fs.existsSync(path.join(root,f)),`missing ${f}`);
 const m=JSON.parse(text('manifest.webmanifest'));assert(m.icons?.length>=2);
 console.log('✓ 16 views rendered, 144 learning units loaded, smoking/nutrition math correct, PWA assets present.');
 console.log('Note: Browser-based visual/offline interaction testing must still be done after HTTPS deployment.');
