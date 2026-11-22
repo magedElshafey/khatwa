@@ -17,7 +17,9 @@ assert(text('index.html').includes('family=Cairo'));
 assert(text('styles.css').includes("font-family:'Cairo'"));
 assert(text('styles.css').includes('html[data-theme="dark"]'));
 const themeWrites=[];
-ctx.document={documentElement:{dataset:{theme:'dark'}},querySelector:()=>({setAttribute:()=>{}}),getElementById:()=>({innerHTML:''})};
+// The app's render() inspects details elements after the first theme change.
+// Model the relevant DOM methods so repeated theme toggles are exercised without a real browser.
+ctx.document={documentElement:{dataset:{theme:'dark'}},querySelector:()=>({setAttribute:()=>{}}),getElementById:()=>({innerHTML:'',querySelectorAll:()=>[],querySelector:()=>null})};
 ctx.localStorage={setItem:(k,v)=>themeWrites.push([k,v])};
 assert.equal(vm.runInContext('isDarkTheme()',ctx),true);
 vm.runInContext('changeTheme()',ctx);
