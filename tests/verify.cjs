@@ -10,6 +10,24 @@ for(const fn of ['viewToday','viewLearning','viewEnglish','viewBusiness','viewSm
  assert.equal(typeof rendered,'string');assert(rendered.length>300,fn+' rendered too little');
 }
 assert.equal(vm.runInContext('allSessions().length',ctx),144,'roadmap sessions changed');
+// Appearance regression checks: default theme, interactive toggle, local preference and unchanged records.
+assert(text('index.html').includes('data-theme="dark"'));
+assert(text('index.html').includes('family=Cairo'));
+assert(text('styles.css').includes("font-family:'Cairo'"));
+assert(text('styles.css').includes('html[data-theme="dark"]'));
+const themeWrites=[];
+ctx.document={documentElement:{dataset:{theme:'dark'}},querySelector:()=>({setAttribute:()=>{}}),getElementById:()=>({innerHTML:''})};
+ctx.localStorage={setItem:(k,v)=>themeWrites.push([k,v])};
+assert.equal(vm.runInContext('isDarkTheme()',ctx),true);
+vm.runInContext('changeTheme()',ctx);
+assert.equal(ctx.document.documentElement.dataset.theme,'light');
+assert.equal(themeWrites.at(-1)[0],'khotwa-theme');
+assert.equal(themeWrites.at(-1)[1],'light');
+vm.runInContext('changeTheme()',ctx);
+assert.equal(ctx.document.documentElement.dataset.theme,'dark');
+assert.equal(themeWrites.at(-1)[1],'dark');
+assert(vm.runInContext('pageShell(viewToday())',ctx).includes('data-action="toggle-theme"'));
+assert(vm.runInContext('viewSettings()',ctx).includes('الشكل والألوان'));
 let out=vm.runInContext(`state.settings.smoking={avg:20,packSize:20,packPrice:100,start:'2026-11-20'};state.rows=[{id:'smoke-2026-11-20',collection:'smoking',date:'2026-11-20',data:{count:0},updatedAt:''},{id:'smoke-2026-11-21',collection:'smoking',date:'2026-11-21',data:{count:5},updatedAt:''},{id:'smoke-2026-11-19',collection:'smoking',date:'2026-11-19',data:{count:0},updatedAt:''}];smokeMath()`,ctx);
 assert.equal(out.days,1);assert.equal(out.avoided,35);assert.equal(out.saved,175);
 let nu=vm.runInContext(`nutritionTotals([{data:{grams:200,calories:100,protein:5,carbs:20,satfat:1,unsatfat:2,otherfat:0}}])`,ctx);

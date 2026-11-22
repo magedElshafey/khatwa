@@ -48,3 +48,9 @@ Online page refreshes fetch newer assets first; offline launches use cached file
 ## Future sync
 
 The records use stable IDs and updatedAt fields so a later authenticated backend could be added with conflict resolution. Sync is **not** implemented.
+
+## Font and appearance
+
+- Cairo is the primary UI font, loaded from Google Fonts when available, with system fallback offline.
+- Dark mode is the default; toggle between dark and light in the header or Settings. Browser preference is saved in localStorage (`khotwa-theme`).
+- Appearance preferences are separate from personal records stored in IndexedDB. Back up your personal records before deploying major updates.

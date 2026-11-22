@@ -1,5 +1,5 @@
 /* Keep application assets available offline, while checking for new releases online. */
-const CACHE_NAME = 'khotwa-pwa-v2';
+const CACHE_NAME = 'khotwa-pwa-v3-theme';
 const APP_SHELL = [
   './', './index.html', './styles.css', './app.js', './roadmap-data.js',
   './manifest.webmanifest', './assets/icon.svg', './assets/icon-192.png', './assets/icon-512.png'
