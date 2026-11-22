@@ -67,3 +67,14 @@ html[data-theme="dark"] .logo-mark{background:#274c49}
 .btn:active,.theme-toggle:active{transform:scale(.98)}
 @media(max-width:760px){.topbar-actions{gap:8px}.topbar-actions .topdate input{width:141px;max-width:141px;height:44px;min-height:44px}.topbar-actions .theme-toggle{width:44px;height:44px;min-height:44px}.today-priority-grid{gap:16px;margin-bottom:18px}}
 @media(prefers-reduced-motion:reduce){.page-content.page-enter{animation:none!important}:where(.btn,.theme-toggle,.navitem,.tab,.card,.sprint,.feature,.item){transition:none!important}.btn:active,.theme-toggle:active{transform:none!important}}
+
+
+/* Accordion hotfix: avoid header reflow and viewport-width changes on expand/collapse. */
+html{scrollbar-gutter:stable}
+.sprint>summary{display:flex;align-items:center;gap:12px;min-height:44px;list-style:none;border-bottom:1px solid transparent}
+.sprint>summary::-webkit-details-marker,.phaseitem>summary::-webkit-details-marker{display:none}
+.sprint>summary::marker,.phaseitem>summary::marker{content:""}
+.sprint>summary>.pill{margin-inline-start:auto;flex-shrink:0}
+.sprint[open]>summary{border-bottom-color:var(--line)}
+.sprint,.phaseitem{transition:border-color .2s ease,background-color .2s ease}
+@media(prefers-reduced-motion:reduce){.sprint,.phaseitem{transition:none!important}}
