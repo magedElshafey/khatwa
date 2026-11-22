@@ -67,3 +67,13 @@ The records use stable IDs and updatedAt fields so a later authenticated backend
 - The 21-hour counter and health timeline read the user's locally stored `quitAt` timestamp. From `avg` cigarettes/day, the app shows *potential* avoided cigarettes and savings: `avg × elapsed hours / 24`, then multiplying by the configured per-cigarette cost. They are **theoretical, not verification of abstinence**. Daily logged actual results remain separate and missing days are never recorded as successful automatically.
 - Evidence milestones are illustrative population-level ranges, not personalized health measurements. Links to NHS, CDC and WHO are shown within the interface. The timeline works offline; links to sources need Internet.
 - Invalid or legacy date-only settings prompt the user to set an exact timestamp; no invented hour is used.
+
+## Supabase personal cloud sync v1
+
+- Supabase Auth plus append-only private table public.khatwa_events protected by Row Level Security. The browser uses a publishable public key, never a service-role key.
+- Settings offers email/password signup and login. Email confirmation may require a matching allowed redirect URL in the Supabase Authentication URL configuration.
+- Sync is opt-in and local IndexedDB still works offline. Initial upload requires explicit user confirmation; no personal records auto-upload before activation.
+- When enabled, new saves and deletions queue in IndexedDB meta, sync online and pull cloud changes roughly every 45 seconds. Repeated edits on two devices use last cloud event wins; history is retained in the event log.
+- Personal photos remain local only and are removed from cloud event payloads. No public storage bucket.
+- Turn off syncing before restoring or clearing local records. Back up first. Auth refresh tokens stay on the device; use trusted browsers.
+- Supabase Free may pause after inactivity; local data remains available.
