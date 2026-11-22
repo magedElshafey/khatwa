@@ -103,6 +103,8 @@ const setupHtml=vm.runInContext("smokeEditing=true;viewSmoking()",ctx);
 assert(setupHtml.includes('type="datetime-local"')&&setupHtml.includes('name="quitAt"'),'quit time picker is required');
 vm.runInContext("smokeEditing=false",ctx);
 assert(text('styles.css').includes('table td .btn + .btn'),'table actions need explicit gaps');
+assert.doesNotThrow(()=>new vm.Script(text('app.js')),'tracked browser app.js has a syntax error');
+assert.doesNotThrow(()=>new vm.Script(text('sw.js')),'service worker source has a syntax error');
 const oldSpiritual=vm.runInContext("state.date='2026-11-22';state.rows=[{id:'spirit-2026-11-22',collection:'spiritual',date:'2026-11-22',data:{adhkar:true},updatedAt:''}];viewSpiritual()",ctx);
 assert(oldSpiritual.includes('أذكار الصباح')&&oldSpiritual.includes('أذكار المساء'),'separate adhkar missing');
 assert(!oldSpiritual.includes('data-spirit="adhkar"'),'combined checkbox must be removed');
