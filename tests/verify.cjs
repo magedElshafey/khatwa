@@ -4,6 +4,7 @@ const text=name=>fs.readFileSync(path.join(root,name),'utf8');
 const ctx=vm.createContext({window:{},console,Date,Math,Number,String,Object,Array,Set,Map,Intl,crypto:{randomUUID:()=>"test"}});
 vm.runInContext(text('roadmap-data.js'),ctx);
 vm.runInContext(text('experience.js'),ctx);
+vm.runInContext(text('nutrition.js'),ctx);
 const appPath=fs.existsSync(path.join(root,'dist','app.js'))?'dist/app.js':'app.js';
 vm.runInContext(text(appPath).replace(/void boot\(\);\s*$/,''),ctx);
 for(const fn of ['viewToday','viewLearning','viewEnglish','viewBusiness','viewSmoking','viewWorkout','viewNutrition','viewBody','viewSpiritual','viewRoutine','viewMoney','viewSocial','viewReview','viewSettings','viewMore']){
@@ -47,6 +48,26 @@ assert(workoutHtml.includes('workout-exercise'),'exercise picker missing');
 assert(workoutHtml.includes('رسم بياني')&&workoutHtml.includes('جدول المجموعات'),'workout view switch missing');
 assert.equal(ctx.window.KhotwaExperience.editor(),'','editor should not show before an Edit action');
 
+const nutrition=ctx.window.KhotwaNutrition;
+assert(nutrition,'nutrition module not loaded');
+assert.equal(nutrition.parseQuery('100جم جبنة قريش كامل الدسم').quantity,100,'quantity parsing');
+const cheese=nutrition.localMatches('جبنة قريش كامل الدسم')[0];
+assert(cheese,'Egyptian cottage cheese lookup missing');
+assert.equal(nutrition.calc(cheese,100).calories,98,'100g calories not auto-calculated');
+assert.equal(nutrition.calc(cheese,100).protein,11.1,'100g protein not auto-calculated');
+assert.equal(nutrition.calc(cheese,150).calories,147,'portion scaling broken');
+const foodData=nutrition.dataFromFood(cheese,100,'breakfast');
+const dayFoods=[{id:'food-1',collection:'food',date:'2026-11-22',data:foodData}];
+assert.equal(nutrition.totals(dayFoods).sum.protein,11.1,'daily protein total broken');
+assert.equal(nutrition.totals(dayFoods).sum.fat,4.3,'daily fat total broken');
+assert.equal(nutrition.totals(dayFoods.concat([{data:{grams:50,name:'legacy'},date:'2026-11-22'}])).unknown.fat,1,'missing legacy nutrients cannot be treated as zero');
+assert(nutrition.normalizeProduct({code:'12345',product_name:'Demo',nutriments:{'energy-kcal_100g':200,'proteins_100g':10,'carbohydrates_100g':20,'fat_100g':8}}),'Open Food Facts normalization broken');
+assert.equal(nutrition.normalizeProduct({code:'12345',product_name:'Incomplete',nutriments:{'energy-kcal_100g':200}}),null,'incomplete product must be rejected');
+const nutritionHtml=vm.runInContext('viewNutrition()',ctx);
+assert(nutritionHtml.includes('nutrition-food-search')&&nutritionHtml.includes('الإفطار'),'nutrition UI unavailable');
+assert(text('index.html').includes('src="./nutrition.js"'),'nutrition script missing in entry');
+
+
 const todayShell=vm.runInContext('pageShell(viewToday())',ctx);
 assert(todayShell.includes('topbar-actions'),'header controls missing layout hook');
 assert(todayShell.includes('id="global-date"'),'date field missing');
@@ -74,7 +95,7 @@ let out=vm.runInContext(`state.settings.smoking={avg:20,packSize:20,packPrice:10
 assert.equal(out.days,1);assert.equal(out.avoided,35);assert.equal(out.saved,175);
 let nu=vm.runInContext(`nutritionTotals([{data:{grams:200,calories:100,protein:5,carbs:20,satfat:1,unsatfat:2,otherfat:0}}])`,ctx);
 assert.equal(nu.calories,200);assert.equal(nu.protein,10);assert.equal(nu.carbs,40);
-for(const f of ['index.html','styles.css','experience.js','app.js','roadmap-data.js','sw.js','manifest.webmanifest','assets/icon-192.png','assets/icon-512.png'])assert(fs.existsSync(path.join(root,f)),`missing ${f}`);
+for(const f of ['index.html','styles.css','experience.js','nutrition.js','app.js','roadmap-data.js','sw.js','manifest.webmanifest','assets/icon-192.png','assets/icon-512.png'])assert(fs.existsSync(path.join(root,f)),`missing ${f}`);
 const m=JSON.parse(text('manifest.webmanifest'));assert(m.icons?.length>=2);
 console.log('✓ 15 views rendered, 144 learning units loaded, smoking/nutrition math correct, PWA assets present.');
 console.log('Note: Browser-based visual/offline interaction testing must still be done after HTTPS deployment.');
