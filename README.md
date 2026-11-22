@@ -54,3 +54,10 @@ The records use stable IDs and updatedAt fields so a later authenticated backend
 - Cairo is the primary UI font, loaded from Google Fonts when available, with system fallback offline.
 - Dark mode is the default; toggle between dark and light in the header or Settings. Browser preference is saved in localStorage (`khotwa-theme`).
 - Appearance preferences are separate from personal records stored in IndexedDB. Back up your personal records before deploying major updates.
+
+## Spiritual habits, bedtime routine & smoking start time
+
+- Spiritual habits now track morning and evening adhkar separately. Historical combined `adhkar` values remain stored and are never silently reassigned to both checkboxes.
+- Bedtime routine has five simple starter steps, each optional, editable and saved by stable step ID for each selected date. You can add/rename/remove steps without deleting old records.
+- Smoking setup records local **date and time** in `settings.smoking.quitAt`, retaining the date-only `start` field for older backups. Partial start-day logs are not used to estimate full-day savings or avoided cigarettes.
+- Table Edit/Delete actions have consistent spacing. No storage migration and no automatic sharing.
