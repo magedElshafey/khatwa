@@ -7,7 +7,7 @@ vm.runInContext(text('experience.js'),ctx);
 vm.runInContext(text('nutrition.js'),ctx);
 const appPath=fs.existsSync(path.join(root,'dist','app.js'))?'dist/app.js':'app.js';
 vm.runInContext(text(appPath).replace(/void boot\(\);\s*$/,''),ctx);
-for(const fn of ['viewToday','viewLearning','viewEnglish','viewBusiness','viewSmoking','viewWorkout','viewNutrition','viewBody','viewSpiritual','viewRoutine','viewMoney','viewSocial','viewReview','viewSettings','viewMore']){
+for(const fn of ['viewToday','viewLearning','viewEnglish','viewBusiness','viewSmoking','viewWorkout','viewNutrition','viewBody','viewSpiritual','viewRoutine','viewSleep','viewMoney','viewSocial','viewReview','viewSettings','viewMore']){
  let rendered=vm.runInContext(fn+'()',ctx);
  assert.equal(typeof rendered,'string');assert(rendered.length>300,fn+' rendered too little');
 }
@@ -93,9 +93,34 @@ assert.equal(afterDetail.open,false,'accordion was reopened after a same-page re
 
 let out=vm.runInContext(`state.settings.smoking={avg:20,packSize:20,packPrice:100,start:'2026-11-20'};state.rows=[{id:'smoke-2026-11-20',collection:'smoking',date:'2026-11-20',data:{count:0},updatedAt:''},{id:'smoke-2026-11-21',collection:'smoking',date:'2026-11-21',data:{count:5},updatedAt:''},{id:'smoke-2026-11-19',collection:'smoking',date:'2026-11-19',data:{count:0},updatedAt:''}];smokeMath()`,ctx);
 assert.equal(out.days,1);assert.equal(out.avoided,35);assert.equal(out.saved,175);
+// A chosen quit hour makes its first date a partial day, not a full baseline day.
+let partial=vm.runInContext("state.settings.smoking.quitAt='2026-11-20T15:30';smokeMath()",ctx);
+assert.equal(partial.days,0,'partial start date must not be counted as a clean full day');
+assert.equal(partial.avoided,15,'partial start date must not count estimated avoided cigarettes');
+assert.equal(partial.saved,75,'partial day should not inflate estimated savings');
+assert.equal(partial.eligible,1,'only complete logged days count in estimated totals');
+const setupHtml=vm.runInContext("smokeEditing=true;viewSmoking()",ctx);
+assert(setupHtml.includes('type="datetime-local"')&&setupHtml.includes('name="quitAt"'),'quit time picker is required');
+vm.runInContext("smokeEditing=false",ctx);
+assert(text('styles.css').includes('table td .btn + .btn'),'table actions need explicit gaps');
+assert.doesNotThrow(()=>new vm.Script(text('app.js')),'tracked browser app.js has a syntax error');
+assert.doesNotThrow(()=>new vm.Script(text('sw.js')),'service worker source has a syntax error');
+const oldSpiritual=vm.runInContext("state.date='2026-11-22';state.rows=[{id:'spirit-2026-11-22',collection:'spiritual',date:'2026-11-22',data:{adhkar:true},updatedAt:''}];viewSpiritual()",ctx);
+assert(oldSpiritual.includes('أذكار الصباح')&&oldSpiritual.includes('أذكار المساء'),'separate adhkar missing');
+assert(!oldSpiritual.includes('data-spirit="adhkar"'),'combined checkbox must be removed');
+assert(oldSpiritual.includes('تسجيل أذكار قديم غير مقسّم'),'historic adhkar must be preserved without guessing');
+assert(oldSpiritual.includes('0 / 9'),'legacy check cannot be silently counted as both new options');
+const sleepHtml=vm.runInContext("viewSleep()",ctx);
+assert(sleepHtml.includes('data-sleep="screen"'),'bedtime checklist not available');
+assert(sleepHtml.includes('data-form="sleep-add"'),'bedtime routine must be customizable');
+assert(sleepHtml.includes('sleep-rename')&&sleepHtml.includes('sleep-remove'),'bedtime items must be editable');
+const bedtimeIds=vm.runInContext('sleepSteps().map(x=>x.id)',ctx);
+assert.equal(new Set(bedtimeIds).size,bedtimeIds.length,'routine steps require stable unique IDs');
+assert(vm.runInContext("pageShell(viewSleep())",ctx).includes('روتين قبل النوم'),'bedtime module navigation missing');
+
 let nu=vm.runInContext(`nutritionTotals([{data:{grams:200,calories:100,protein:5,carbs:20,satfat:1,unsatfat:2,otherfat:0}}])`,ctx);
 assert.equal(nu.calories,200);assert.equal(nu.protein,10);assert.equal(nu.carbs,40);
 for(const f of ['index.html','styles.css','experience.js','nutrition.js','app.js','roadmap-data.js','sw.js','manifest.webmanifest','assets/icon-192.png','assets/icon-512.png'])assert(fs.existsSync(path.join(root,f)),`missing ${f}`);
 const m=JSON.parse(text('manifest.webmanifest'));assert(m.icons?.length>=2);
-console.log('✓ 15 views rendered, 144 learning units loaded, smoking/nutrition math correct, PWA assets present.');
+console.log('✓ 16 views rendered, 144 learning units loaded, smoking/nutrition math correct, PWA assets present.');
 console.log('Note: Browser-based visual/offline interaction testing must still be done after HTTPS deployment.');
