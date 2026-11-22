@@ -28,6 +28,15 @@ assert.equal(ctx.document.documentElement.dataset.theme,'dark');
 assert.equal(themeWrites.at(-1)[1],'dark');
 assert(vm.runInContext('pageShell(viewToday())',ctx).includes('data-action="toggle-theme"'));
 assert(vm.runInContext('viewSettings()',ctx).includes('الشكل والألوان'));
+const todayShell=vm.runInContext('pageShell(viewToday())',ctx);
+assert(todayShell.includes('topbar-actions'),'header controls missing layout hook');
+assert(todayShell.includes('id="global-date"'),'date field missing');
+assert(!todayShell.includes('class="avatar"'),'decorative lock still visible');
+assert(todayShell.includes('class="page-content"'),'page wrapper missing');
+assert(vm.runInContext('viewToday()',ctx).includes('today-priority-grid'),'Today spacing missing');
+assert(text('styles.css').includes('khotwa-page-enter'),'entry animation missing');
+assert(text('styles.css').includes('prefers-reduced-motion:reduce'),'reduced motion not supported');
+
 let out=vm.runInContext(`state.settings.smoking={avg:20,packSize:20,packPrice:100,start:'2026-11-20'};state.rows=[{id:'smoke-2026-11-20',collection:'smoking',date:'2026-11-20',data:{count:0},updatedAt:''},{id:'smoke-2026-11-21',collection:'smoking',date:'2026-11-21',data:{count:5},updatedAt:''},{id:'smoke-2026-11-19',collection:'smoking',date:'2026-11-19',data:{count:0},updatedAt:''}];smokeMath()`,ctx);
 assert.equal(out.days,1);assert.equal(out.avoided,35);assert.equal(out.saved,175);
 let nu=vm.runInContext(`nutritionTotals([{data:{grams:200,calories:100,protein:5,carbs:20,satfat:1,unsatfat:2,otherfat:0}}])`,ctx);
