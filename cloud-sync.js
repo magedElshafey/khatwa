@@ -58,12 +58,15 @@ async function boot(){
  session=loadSession();
  if(!session?.user?.id){session=null;return}
  if(owner() && owner()!==session.user.id){saveSession(null);lastError='هذا الجهاز مرتبط بحساب آخر. احتفظ بنسخة احتياطية قبل تغيير الحساب.';return}
+ enabled=meta.find(x=>x.id===enabledKey())?.data===true;
+ pending=meta.find(x=>x.id===queueKey())?.data||[];
+ // Offline reload must keep capturing edits to the durable outbox.
+ if(enabled)startPolling();
+ if(navigator.onLine===false){lastError='أنت بدون إنترنت؛ التعديلات هتتزامن لما الاتصال يرجع.';return;}
  try{
   const user=await authRequest('user',{headers:{Authorization:'Bearer '+await token()}});
   if(!user.id||user.id!==session.user.id)throw Error('تعذر تأكيد الحساب');
-  enabled=meta.find(x=>x.id===enabledKey())?.data===true;
-  pending=meta.find(x=>x.id===queueKey())?.data||[];
-  if(enabled){startPolling();void sync();}
+  if(enabled)void sync();
  }catch(err){lastError=err.message||String(err)}
 }
 async function submit(form){
@@ -108,6 +111,8 @@ async function enqueue(kind,operation,entityId,payload){
 function startPolling(){
  if(poller)return;
  poller=setInterval(()=>{if(navigator.onLine!==false&&canRun())void sync()},45000);
+ window.addEventListener('online',()=>{if(canRun())void sync()});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&canRun())void sync()});
 }
 async function loadEvents(){
  const out=[];const cursorRecord=(await hooks.dbGetAll('meta')).find(x=>x.id===cursorKey())?.data;
@@ -138,6 +143,7 @@ async function pushPending(){
  }
 }
 async function applyEvent(ev){
+ if(pending.some(x=>x.entity_id===ev.entity_id&&x.kind===ev.kind))return false;
  if(ev.kind==='settings'){
   if(ev.operation==='upsert' && ev.payload?.data && typeof ev.payload.data==='object'){
    state().settings={...hooks.defaults,...ev.payload.data};
