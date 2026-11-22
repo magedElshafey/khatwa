@@ -3,6 +3,7 @@ const root=path.resolve(__dirname,'..');
 const text=name=>fs.readFileSync(path.join(root,name),'utf8');
 const ctx=vm.createContext({window:{},console,Date,Math,Number,String,Object,Array,Set,Map,Intl,crypto:{randomUUID:()=>"test"}});
 vm.runInContext(text('roadmap-data.js'),ctx);
+vm.runInContext(text('experience.js'),ctx);
 const appPath=fs.existsSync(path.join(root,'dist','app.js'))?'dist/app.js':'app.js';
 vm.runInContext(text(appPath).replace(/void boot\(\);\s*$/,''),ctx);
 for(const fn of ['viewToday','viewLearning','viewEnglish','viewBusiness','viewSmoking','viewWorkout','viewNutrition','viewBody','viewSpiritual','viewRoutine','viewMoney','viewSocial','viewReview','viewSettings','viewMore']){
@@ -28,6 +29,22 @@ assert.equal(ctx.document.documentElement.dataset.theme,'dark');
 assert.equal(themeWrites.at(-1)[1],'dark');
 assert(vm.runInContext('pageShell(viewToday())',ctx).includes('data-action="toggle-theme"'));
 assert(vm.runInContext('viewSettings()',ctx).includes('الشكل والألوان'));
+// Workout insights: per-exercise daily aggregation and chart/table availability.
+const exerciseRows=[
+ {date:'2026-11-01',data:{exercise:'Flat Bench Press',set:1,reps:8,weight:'20'}},
+ {date:'2026-11-01',data:{exercise:' flat  bench  press ',set:2,reps:9,weight:'20'}},
+ {date:'2026-11-09',data:{exercise:'Flat Bench Press',set:1,reps:7,weight:'22.5'}}
+];
+const sessionStats=ctx.window.KhotwaExperience.stats(exerciseRows);
+assert.equal(sessionStats.length,2,'workout sessions must group by date');
+assert.equal(sessionStats[0].volume,340,'session volume must add set volumes');
+assert.equal(sessionStats[1].bestWeight,22.5,'top weight must come from the chosen exercise');
+vm.runInContext("state.rows=[{id:'workout-abc',collection:'workout',date:'2026-11-01',data:{exercise:'Flat Bench Press',set:1,reps:8,weight:'20',notes:''}}]",ctx);
+const workoutHtml=vm.runInContext('viewWorkout()',ctx);
+assert(workoutHtml.includes('workout-exercise'),'exercise picker missing');
+assert(workoutHtml.includes('رسم بياني')&&workoutHtml.includes('جدول المجموعات'),'workout view switch missing');
+assert.equal(ctx.window.KhotwaExperience.editor(),'','editor should not show before an Edit action');
+
 const todayShell=vm.runInContext('pageShell(viewToday())',ctx);
 assert(todayShell.includes('topbar-actions'),'header controls missing layout hook');
 assert(todayShell.includes('id="global-date"'),'date field missing');
@@ -55,7 +72,7 @@ let out=vm.runInContext(`state.settings.smoking={avg:20,packSize:20,packPrice:10
 assert.equal(out.days,1);assert.equal(out.avoided,35);assert.equal(out.saved,175);
 let nu=vm.runInContext(`nutritionTotals([{data:{grams:200,calories:100,protein:5,carbs:20,satfat:1,unsatfat:2,otherfat:0}}])`,ctx);
 assert.equal(nu.calories,200);assert.equal(nu.protein,10);assert.equal(nu.carbs,40);
-for(const f of ['index.html','styles.css','app.js','roadmap-data.js','sw.js','manifest.webmanifest','assets/icon-192.png','assets/icon-512.png'])assert(fs.existsSync(path.join(root,f)),`missing ${f}`);
+for(const f of ['index.html','styles.css','experience.js','app.js','roadmap-data.js','sw.js','manifest.webmanifest','assets/icon-192.png','assets/icon-512.png'])assert(fs.existsSync(path.join(root,f)),`missing ${f}`);
 const m=JSON.parse(text('manifest.webmanifest'));assert(m.icons?.length>=2);
 console.log('✓ 15 views rendered, 144 learning units loaded, smoking/nutrition math correct, PWA assets present.');
 console.log('Note: Browser-based visual/offline interaction testing must still be done after HTTPS deployment.');
