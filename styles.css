@@ -238,3 +238,13 @@ html{scrollbar-gutter:stable}
 .smoke-health-disclaimer{font-size:11px;line-height:1.9;color:var(--muted);padding:4px 3px;margin:10px 0 0}
 @media(max-width:640px){.smoke-health-highlight{flex-direction:column;align-items:stretch;padding:16px;gap:13px}.smoke-health-next{flex:0 0 auto}.smoke-health-highlight h3{font-size:16px}.smoke-health-timeline{padding:13px}.smoke-health-stage{gap:8px}}
 @media(prefers-reduced-motion:reduce){.smoke-health-details>summary::after{transition:none}}
+
+/* Personal cloud login and sync settings. */
+.cloud-card{margin-bottom:18px}
+.cloud-card .grid.g2{align-items:start}
+.cloud-card form{display:flex;flex-direction:column;gap:12px;min-width:0;padding:14px;background:var(--bg);border-radius:12px;border:1px solid var(--line)}
+.cloud-card form h3{font-size:14px;margin:0 0 3px}
+.cloud-card form button[type="submit"]{align-self:start;margin-top:6px}
+.cloud-card .cloud-actions{margin:14px 0;gap:12px}
+.cloud-card .hint{overflow-wrap:anywhere}
+@media(max-width:700px){.cloud-card .grid.g2{grid-template-columns:1fr}.cloud-card form{padding:12px}.cloud-actions .btn{min-height:42px}}
