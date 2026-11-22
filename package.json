@@ -1,0 +1,16 @@
+{
+  "name": "khotwa-life-os",
+  "version": "0.1.1",
+  "private": true,
+  "description": "Khotwa — Arabic offline-first personal learning and life dashboard",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/build.cjs",
+    "test": "node tests/verify.cjs",
+    "preview": "npx serve public",
+    "check": "npm run build && npm test"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  },
+  "license": "UNLICENSED"
+}

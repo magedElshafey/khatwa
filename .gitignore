@@ -1,0 +1,12 @@
+node_modules/
+dist/
+public/
+.vercel/
+.env
+.env.*
+*.log
+# Local exports can contain personal/health/financial data; never commit these.
+*khotwa-backup*.json
+*mentor-review*.txt
+*.local.json
+.DS_Store
