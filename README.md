@@ -89,3 +89,10 @@ The records use stable IDs and updatedAt fields so a later authenticated backend
 ## Global toast notifications
 
 The previous single `.alert` element was replaced with a tiny, dependency-free `window.KhatwaToast` module (`toasts.js`) shared by all Khatwa screens. Use `KhatwaToast.success(message)`, `.error(message)`, `.warning(message)`, `.info(message)` or `.show(message,{type})`. User-facing messages are rendered as plain text, not HTML. Toasts have bounded stacking, sensible auto-dismiss durations, pause on hover/keyboard focus, accessible status/alert roles, close controls, touch swipe dismiss, RTL-aware position, dark/light theme, responsive placement above the mobile nav, and reduced-motion support. Destructive confirmations remain confirmation dialogs, not transient toasts.
+
+## Quitting companion — live time and supportive logging
+
+- Quitting duration is shown as **days, hours and minutes** calculated from `settings.smoking.quitAt` using the device clock, updated automatically every 10 seconds while the page is visible. No daily check-in is needed for the timer; check-ins remain **optional** documentation. Time elapsed is not proof of abstinence.
+- Users can save up to 12 personal motivations, which are displayed at the top of the smoking page and again in the craving support dialog. These settings sync across devices through the existing account settings record.
+- The optional craving support dialog suggests small, nonjudgmental coping strategies and makes clear cravings are not lapses. Only a user-confirmed event (cigarette actually smoked) is logged as `smoking-relapse` and restarts the clock at the confirmed new quit timestamp. The previous quit timestamp and relapse count are preserved in the record history; nothing is recorded when the user just feels an urge.
+- Relapse events and account settings are stored in IndexedDB and sync via the existing Supabase event log, with no new credentials, APIs or backend migration.
