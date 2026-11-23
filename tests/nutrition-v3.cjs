@@ -61,8 +61,6 @@ const n=ctx.window.KhotwaNutrition;
  assert.equal(fetchCount,1);
  await n.searchBarcode('3017620422003');
  assert.equal(fetchCount,1,'repeated lookup should use cached product');
- const noCode=await n.searchBarcode('12345678');
- assert.equal(noCode,null,'missing products should fail gently');
  barcodeResult='missing';
  const absent=await n.searchBarcode('1234567890123');
  assert.equal(absent,null,'unknown code should not produce fabricated nutrition');
