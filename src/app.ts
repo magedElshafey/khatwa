@@ -3,7 +3,7 @@ interface LifeRow { id:string; collection:string; date:string; data:any; updated
 interface SleepStep { id:string; label:string; }
 interface LifeSettings { displayName:string; weeklyEngineering:number; weeklyBusiness:number; englishDaily:number; goals:string[]; smoking?:{avg:number;packSize:number;packPrice:number;start:string;quitAt?:string}; routine:string[]; sleepRoutine?:SleepStep[]; }
 interface LifeState { page:string; date:string; phase:number; db:IDBDatabase|null; rows:LifeRow[]; settings:LifeSettings; }
-interface Window { LIFE_OS_ROADMAP:any; KhotwaExperience:any; KhotwaNutrition:any; KhotwaSmokeInsights:any; KhotwaCloud:any }
+interface Window { LIFE_OS_ROADMAP:any; KhotwaExperience:any; KhotwaNutrition:any; KhotwaSmokeInsights:any; KhotwaCloud:any; KhatwaToast:any }
 const defaultSleepSteps:SleepStep[]=[
 {id:'screen',label:'خفّف إضاءة الأوضة وابعد الموبايل شوية (حوالي 5 دقايق)'},
 {id:'hygiene',label:'اغسل سنانك وجهّز نفسك للنوم (3 دقايق)'},
@@ -75,7 +75,7 @@ async function exportLegacy(rows:LifeRow[],settings:LifeSettings):Promise<void>{
  await download(`khotwa-legacy-backup-${today()}.json`,JSON.stringify({format:'khotwa-life-os-backup',schemaVersion:1,exportedAt:new Date().toISOString(),settings,records:rows},null,2),'application/json');
  notice('اتعملت نسخة احتياطية من بياناتك القديمة.');
 }
-function notice(text:string){let old=document.querySelector('.alert');old?.remove();let el=document.createElement('div');el.className='alert';el.textContent=text;el.setAttribute('role','status');document.body.append(el);setTimeout(()=>el.remove(),3800);}
+function notice(text:string,type:'success'|'error'|'warning'|'info'='success'){window.KhatwaToast.show(text,{type});}
 const getFD=(f:HTMLFormElement,key:string)=>String(new FormData(f).get(key)??'').trim();
 function allSessions():any[]{return window.LIFE_OS_ROADMAP.phases.flatMap((p:any)=>p.sprints.flatMap((s:any)=>[['A',s.a],['B',s.b],['L',s.lab]].map(([k,v]:any)=>({key:`${s.id}-${k}`,phase:p,sprint:s,kind:k,title:v.title||v.task||v.evidence||'تطبيق',theory:v.theory||'',practice:v.practice||v.evidence||'',level:v.level||'P0'}))));}
 function nextSession(){return allSessions().find(s=>row('learning-'+s.key)?.data?.status!=='completed');}
@@ -185,13 +185,13 @@ async function imageToDataURL(file:File):Promise<string>{if(file.size>12*1024*10
 async function download(name:string,data:string,contentType='text/plain;charset=utf-8'){let blob=new Blob([data],{type:contentType});let url=URL.createObjectURL(blob);let a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);}
 async function backup(){let obj={format:'khotwa-life-os-backup',schemaVersion:1,exportedAt:new Date().toISOString(),settings:state.settings,records:state.rows};await download(`khotwa-backup-${today()}.json`,JSON.stringify(obj,null,2),'application/json');notice('نسخة احتياطية جاهزة. احتفظ بيها في مكان خاص.');}
 async function restore(f:File){if(window.KhotwaCloud.isActive())throw Error('أوقف المزامنة قبل استيراد Backup، حتى لا تتعارض السجلات بين الأجهزة.');if(f.size>35*1024*1024)throw Error('ملف كبير جدًا، اختار نسخة أصغر من 35 MB');let content=await f.text();let parsed=JSON.parse(content);if(parsed?.format!=='khotwa-life-os-backup'||parsed.schemaVersion!==1||!Array.isArray(parsed.records)||typeof parsed.settings!=='object')throw Error('دي مش نسخة احتياطية صالحة');let clean:LifeRow[]=parsed.records.map((x:any)=>{if(!x||typeof x.id!=='string'||x.id.length>100||typeof x.collection!=='string'||x.collection.length>40||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(x.date)||typeof x.data!=='object')throw Error('فيه سجل غير صالح');return {id:x.id,collection:x.collection,date:x.date,data:x.data,updatedAt:typeof x.updatedAt==='string'?x.updatedAt:new Date().toISOString()}});let settings={...defaults,...parsed.settings};if(!confirm(`الاستيراد هيستبدل كل البيانات الحالية بـ ${clean.length} سجل. يفضّل تصدّر Backup الأول. هل توافق؟`))return;await new Promise<void>((resolve,reject)=>{if(!state.db)return reject(Error('DB unavailable'));let tx=state.db.transaction(['records','meta'],'readwrite');tx.objectStore('records').clear();tx.objectStore('meta').clear();for(let r of clean)tx.objectStore('records').put(r);tx.objectStore('meta').put({id:'settings',data:settings,updatedAt:new Date().toISOString()});tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});state.rows=clean;state.settings=settings;render();notice('تم استيراد النسخة بنجاح.');}
-async function wipe(){if(window.KhotwaCloud.isActive())throw Error('أوقف المزامنة قبل مسح السجلات المحلية. الحذف هنا لا يحذف بيانات السحابة.');if(!confirm('متأكد إنك عايز تمسح كل سجلاتك وصورك من الجهاز ده؟ العملية مش هتتراجع من غير Backup.'))return;await dbClear('records');await dbClear('meta');state.rows=[];state.settings={...defaults};render();notice('اتمسحت البيانات المحلية.');}
+async function wipe(){if(window.KhotwaCloud.isActive())throw Error('أوقف المزامنة قبل مسح السجلات المحلية. الحذف هنا لا يحذف بيانات السحابة.');if(!confirm('متأكد إنك عايز تمسح كل سجلاتك وصورك من الجهاز ده؟ العملية مش هتتراجع من غير Backup.'))return;await dbClear('records');await dbClear('meta');state.rows=[];state.settings={...defaults};render();notice('اتمسحت البيانات المحلية.','warning');}
 let smokeEditing=false;
 async function handleSubmit(e:SubmitEvent){let form=e.target;if(!(form instanceof HTMLFormElement)||!form.dataset.form)return;e.preventDefault();let kind=form.dataset.form;const get=(key:string)=>getFD(form,key),date=get('date')||state.date;const val=(key:string)=>safeNumber(get(key));try{
 if(kind==='cloud-login'||kind==='cloud-signup'){await window.KhotwaCloud.submit(form);return;}
 if(kind==='nutrition-add'||kind==='nutrition-edit'){await window.KhotwaNutrition.submit(form);return;}
 if(kind==='edit-record'){await window.KhotwaExperience.submitEdit(form);return;}
-if(kind==='study'){let key=form.dataset.key||'';let sess=allSessions().find(x=>x.key===key);if(!sess)throw Error('الجلسة مش موجودة');if(get('status')==='completed'&& !get('notes')&&!get('evidence')){notice('قبل ما تقول خلصت: سجّل شرح بسيط أو دليل على التطبيق.');return;}await save('learning',state.date,{key,phase:sess.phase.id,sprint:sess.sprint.id,status:get('status'),minutes:val('minutes'),source:get('source'),evidence:get('evidence'),notes:get('notes'),question:get('question'),self:get('self')},`learning-${key}`);go('learning');notice('اتحفظت الجلسة.');return;}
+if(kind==='study'){let key=form.dataset.key||'';let sess=allSessions().find(x=>x.key===key);if(!sess)throw Error('الجلسة مش موجودة');if(get('status')==='completed'&& !get('notes')&&!get('evidence')){notice('قبل ما تقول خلصت: سجّل شرح بسيط أو دليل على التطبيق.','warning');return;}await save('learning',state.date,{key,phase:sess.phase.id,sprint:sess.sprint.id,status:get('status'),minutes:val('minutes'),source:get('source'),evidence:get('evidence'),notes:get('notes'),question:get('question'),self:get('self')},`learning-${key}`);go('learning');notice('اتحفظت الجلسة.');return;}
 if(kind==='english'){if(val('minutes')<=0)throw Error('سجل وقت الممارسة الفعلي');await save('english',date,{skill:get('skill'),minutes:val('minutes'),notes:get('notes')},`english-${date}`);state.date=date;}
 if(kind==='business'){let id=form.dataset.key||'';await save('business',state.date,{status:get('status'),minutes:val('minutes'),notes:get('notes'),step:id},`biz-${id}`);}
 if(kind==='daily-steps'){const raw=get('count'),count=Number(raw);if(!raw||!Number.isSafeInteger(count)||count<0||count>100000)throw Error('سجّل عدد خطوات صحيح من 0 إلى 100000');await save('steps',date,{count},`steps-${date}`);state.date=date;}
@@ -207,7 +207,7 @@ if(kind==='routine-add'){let v=get('name');if(!v)throw Error('اكتب اسم ا
 if(kind==='review'){let w=form.dataset.week||weekStart();await save('review',w,{done:get('done'),blockers:get('blockers'),next:get('next'),questions:get('questions')},`review-${w}`);}
 if(kind==='settings'){let goals=[get('goal0'),get('goal1'),get('goal2')].filter(Boolean);await saveSettings({...state.settings,displayName:get('displayName'),weeklyEngineering:val('weeklyEngineering'),weeklyBusiness:val('weeklyBusiness'),englishDaily:Math.max(1,val('englishDaily')),goals:goals.length?goals:defaults.goals});state.date=get('activeDate')||state.date;}
 render();notice('اتحفظ بنجاح على جهازك.');
-}catch(err){notice('مقدرتش أحفظ: '+(err instanceof Error?err.message:'خطأ غير معروف'));}
+}catch(err){notice('مقدرتش أحفظ: '+(err instanceof Error?err.message:'خطأ غير معروف'),'error');}
 }
 async function handleChange(e:Event){let t=e.target;if(t instanceof HTMLSelectElement && t.id==='workout-exercise'){window.KhotwaExperience.setExercise(t.value);render();return;}if(!(t instanceof HTMLInputElement))return;try{
 if(t.id==='global-date'){if(t.value)state.date=t.value;render();return;}
@@ -215,7 +215,7 @@ if(t.dataset.spirit){let data={...(row('spirit-'+state.date)?.data||{})};data[t.
 if(t.dataset.sleep!==undefined){const step=sleepSteps().find(x=>x.id===t.dataset.sleep);if(!step)return;const old=row('sleep-'+state.date)?.data||{};await save('sleep',state.date,{...old,steps:{...(old.steps||{}),[step.id]:t.checked}},'sleep-'+state.date);render();notice('اتسجل اختيارك.');return;}
 if(t.dataset.routine!==undefined){let key=state.settings.routine[Number(t.dataset.routine)];if(key===undefined)return;let data={...(row('routine-'+state.date)?.data||{})};data[encodeURIComponent(key)]=t.checked;await save('routine',state.date,data,`routine-${state.date}`);render();notice('اتسجل اختيارك.');}
 if(t.id==='import-file'&&t.files?.[0]){await restore(t.files[0]);t.value='';}
-}catch(err){notice('تعذر التحديث: '+(err instanceof Error?err.message:'خطأ'));}}
+}catch(err){notice('تعذر التحديث: '+(err instanceof Error?err.message:'خطأ'),'error');}}
 async function handleClick(e:MouseEvent){let el=(e.target as Element)?.closest<HTMLElement>('[data-nav],[data-action]');if(!el)return;let page=el.dataset.nav;if(page){go(page);return;}let a=el.dataset.action;try{
 if(a?.startsWith('cloud-')){await window.KhotwaCloud.action(a);return;}
 if(a?.startsWith('nutrition-')){await window.KhotwaNutrition.action(a,el,e.target);return;}
@@ -239,6 +239,6 @@ if(a==='copy-report'){let s=makeReport(weekStart());try{await navigator.clipboar
 if(a==='download-report'){await download('mentor-review-'+weekStart()+'.txt',makeReport(weekStart()));return;}
 if(a==='export-data'){await backup();return;}
 if(a==='clear-all'){await wipe();return;}
-}catch(err){notice('فيه مشكلة: '+(err instanceof Error?err.message:'خطأ غير معروف'));}}
+}catch(err){notice('فيه مشكلة: '+(err instanceof Error?err.message:'خطأ غير معروف'),'error');}}
 async function boot(){try{state.db=await openDB();state.rows=await dbGetAll('records');let meta=await dbGetAll('meta');let s=meta.find(x=>x.id==='settings')?.data;state.settings={...defaults,...(s||{})};let x=window.LIFE_OS_ROADMAP;if(!x||!Array.isArray(x.phases)||!x.phases.length)throw Error('الخريطة مش متاحة');document.addEventListener('click',e=>void handleClick(e));document.addEventListener('submit',e=>void handleSubmit(e));document.addEventListener('change',e=>void handleChange(e));document.addEventListener('input',e=>window.KhotwaNutrition.handleInput(e));render();void window.KhotwaCloud.init({state,dbGetAll,dbPut,dbDelete,render,notice,defaults,switchAccountDatabase,exportLegacy}).then(()=>render()).catch((err:unknown)=>notice('تعذر تجهيز السحابة: '+(err instanceof Error?err.message:String(err))));if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('./sw.js').catch(()=>{});}catch(err){let app=document.getElementById('app');if(app)app.innerHTML=`<div class="startup"><h1>حصلت مشكلة في تشغيل خطوة</h1><p>جرّب فتحه من localhost أو HTTPS، وتأكد إن المتصفح بيدعم التخزين المحلي.</p><pre>${E(err instanceof Error?err.message:String(err))}</pre></div>`;}}
 void boot();
