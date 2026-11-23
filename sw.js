@@ -1,5 +1,5 @@
 /* Keep application assets available offline, while checking for new releases online. */
-const CACHE_NAME = 'khotwa-pwa-v10-cloud-sync';
+const CACHE_NAME = 'khotwa-pwa-v11-auth-first-steps';
 const APP_SHELL = [
   './', './index.html', './styles.css', './app.js', './experience.js', './nutrition.js', './smoking-insights.js', './cloud-sync.js', './roadmap-data.js',
   './manifest.webmanifest', './assets/icon.svg', './assets/icon-192.png', './assets/icon-512.png'
