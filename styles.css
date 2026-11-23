@@ -405,6 +405,8 @@ html{scrollbar-gutter:stable}
 .quit-reasons-counter{font-size:10px;font-weight:800;padding:5px 10px;border-radius:25px;color:var(--mint);background:var(--mint-light);white-space:nowrap}
 .quit-reasons-grid{list-style:none;padding:0;margin:0 0 15px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
 .quit-reason-tile{display:flex;align-items:flex-start;gap:11px;min-width:0;min-height:66px;padding:13px 14px;border:1px solid var(--line);border-radius:13px;background:var(--bg)}
+.quit-reason-tile.is-primary{border-color:color-mix(in srgb,var(--mint) 44%,var(--line));background:color-mix(in srgb,var(--mint-light) 48%,var(--paper))}
+.quit-reason-primary-label{margin-inline-start:auto;flex-shrink:0;border-radius:20px;padding:2px 7px;background:var(--mint-light);color:var(--mint);font-size:9px;font-weight:800}
 .quit-reason-tile-number{font-size:11px;line-height:1.7;font-weight:900;color:var(--mint);flex-shrink:0;font-variant-numeric:tabular-nums}
 .quit-reason-tile-text{font-size:13px;line-height:1.85;font-weight:700;color:var(--ink);overflow-wrap:anywhere}
 .quit-reasons-empty{font-size:12px;line-height:1.9;color:var(--muted);padding:8px 0;margin:0 0 12px}
