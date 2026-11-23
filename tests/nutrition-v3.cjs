@@ -30,6 +30,8 @@ const ctx=vm.createContext({
  },
  FormData:TestFormData,crypto:{randomUUID:()=>String(written.length+1)},
  URLSearchParams,fetch:mockedFetch,
+ confirm:()=>true,
+ erase:async id=>{state.rows=state.rows.filter(x=>x.id!==id)},
  notice:msg=>notifications.push(msg),render:()=>{renderCount++;},
  document:{getElementById:()=>null,querySelector:()=>null}
 });
@@ -52,6 +54,17 @@ const n=ctx.window.KhotwaNutrition;
  await assert.rejects(n.saveCustomFood(custom),/موجود/,'duplicate custom foods should be rejected');
  const invalid={dataset:{form:'nutrition-custom'},values:{...custom.values,name:'غير منطقي',basis:'20',fat:'21'}};
  await assert.rejects(n.saveCustomFood(invalid),/راجع/,'fat grams exceeding serving weight must be rejected');
+ await n.action('nutrition-edit-custom',{dataset:{id:selected.id}});
+ assert(n.view().includes('nutrition-custom-edit'),'saved product should support correction of its label');
+ const edit={dataset:{form:'nutrition-custom-edit'},values:{...custom.values,kcal:'120',protein:'4'}};
+ const updated=await n.saveCustomFood(edit);
+ assert.equal(updated.id,selected.id,'editing should retain the original synced record ID');
+ assert.equal(updated.kcal,240,'edited 50g label should normalize to per-100g correctly');
+ assert.equal(updated.protein,8,'edited protein conversion should remain correct');
+ assert.equal(state.rows.filter(x=>x.collection==='food-custom').length,1,'editing should not create duplicate products');
+ await n.action('nutrition-delete-custom',{dataset:{id:updated.id}});
+ assert.equal(state.rows.filter(x=>x.collection==='food-custom').length,0,'deleting a product must remove it from the saved catalog');
+
  const product=await n.searchBarcode('3017620422003');
  assert.equal(product.name,'منتج تجريبي','product barcode should resolve the exact product');
  assert.equal(product.kcal,230);
