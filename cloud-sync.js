@@ -250,7 +250,7 @@ async function sync(){
  finally{working=false;}
 }
 async function signout(){
- if(working){hooks.notice('المزامنة شغالة دلوقتي. جرّب تسجيل الخروج بعد لحظات.');return;}
+ if(working){hooks.notice('المزامنة شغالة دلوقتي. جرّب تسجيل الخروج بعد لحظات.','warning');return;}
  if(pending.length && !confirm('فيه تغييرات لسه مستنية اتصال الإنترنت عشان تتزامن. الأفضل تستنى قبل تسجيل الخروج. تخرج رغم كده؟'))return;
  if(!confirm('تسجيل خروج من الجهاز ده؟ مش هيمسح بيانات حسابك من السحابة.'))return;
  enabled=false;prepared=false;migrationRequired=false;
@@ -265,7 +265,7 @@ async function action(name){
  if(name==='cloud-import-legacy')return importLegacy();
  if(name==='cloud-skip-legacy')return prepareWithoutImport();
  if(name==='cloud-export-legacy'){await hooks.exportLegacy(legacySnapshot.rows,legacySnapshot.settings);return}
- if(name==='cloud-sync-now'){await sync();hooks.render();hooks.notice(lastError||'تمت محاولة المزامنة.');return}
+ if(name==='cloud-sync-now'){await sync();hooks.render();hooks.notice(lastError||'تمت محاولة المزامنة.',lastError?'error':'info');return}
  if(name==='cloud-signout')return signout();
 }
 function loadingView(){
