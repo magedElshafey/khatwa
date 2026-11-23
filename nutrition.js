@@ -114,6 +114,7 @@
   let selected = null;
   let meal = 'breakfast';
   let editingId = null;
+  let editingCustomId = null;
   let barcodeBusy = false;
   let busy = false;
   let lastOnlineSearch = 0;
@@ -273,23 +274,27 @@
     </section>`;
   }
   function customHtml(){
-    const foods=customFoods();
-    return `<details class="nutrition-custom-panel"><summary><span>＋ أضف صنف مش موجود</span><small>من بطاقة المنتج أو معلومة موثوقة</small></summary>
-     <p class="hint">القيم اللي هتكتبها هتتحفظ في حسابك وتظهر في البحث بعد كده. اكتب الرقم المدوّن للـ100 جم، أو غيّر وزن الحصة المكتوب على العبوة.</p>
-     <form data-form="nutrition-custom" class="nutrition-custom-form">
-      <div class="field nutrition-custom-wide"><label for="nutrition-custom-name">اسم الصنف أو البراند</label><input id="nutrition-custom-name" name="name" type="text" maxlength="100" placeholder="مثال: زبادي سادة من الشركة ..." required></div>
+    const foods=customFoods(),editRow=state.rows.find(x=>x.id===editingCustomId&&x.collection==='food-custom');
+    const current=editRow?.data||{},isEdit=!!editRow,basis=Number(current.basis)||100;
+    const labelValue=key=>current[key]===null||current[key]===undefined?'':String(Math.round(current[key]*basis));
+    const selectedPrep=current.prep||'packaged';
+    const option=(value,label)=>`<option value="${value}" ${selectedPrep===value?'selected':''}>${label}</option>`;
+    return `<details class="nutrition-custom-panel" ${isEdit?'open':''}><summary><span>＋ ${isEdit?'تعديل الصنف المحفوظ':'أضف صنف مش موجود'}</span><small>من بطاقة المنتج أو معلومة موثوقة</small></summary>
+     <p class="hint">القيم اللي هتكتبها هتتحفظ في حسابك وتظهر في البحث بعد كده. اكتب القيم لكل 100 جم، أو غيّر وزن الحصة حسب البطاقة الغذائية.</p>
+     <form data-form="${isEdit?'nutrition-custom-edit':'nutrition-custom'}" class="nutrition-custom-form">
+      <div class="field nutrition-custom-wide"><label for="nutrition-custom-name">اسم الصنف أو البراند</label><input id="nutrition-custom-name" name="name" type="text" maxlength="100" value="${escape(current.name||'')}" placeholder="مثال: زبادي سادة من الشركة ..." required></div>
       <div class="nutrition-custom-grid">
-       <div class="field"><label for="nutrition-custom-basis">القيم لكل كام جرام؟</label><input id="nutrition-custom-basis" name="basis" type="number" min="1" max="10000" step="any" value="100" required></div>
-       <div class="field"><label for="nutrition-custom-prep">حالة الأكل</label><select id="nutrition-custom-prep" name="prep"><option value="packaged">منتج معبأ / بطاقة غذائية</option><option value="cooked">مطبوخ</option><option value="raw">نيّ</option><option value="unknown">مش محدد</option></select></div>
-       <div class="field"><label for="nutrition-custom-kcal">السعرات على الملصق</label><input id="nutrition-custom-kcal" name="kcal" type="number" min="0" max="10000" step="any" placeholder="مثال: 130" required></div>
-       <div class="field"><label for="nutrition-custom-protein">البروتين (جم) — اختياري</label><input id="nutrition-custom-protein" name="protein" type="number" min="0" max="1000" step="any" placeholder="—"></div>
-       <div class="field"><label for="nutrition-custom-carbs">الكارب (جم) — اختياري</label><input id="nutrition-custom-carbs" name="carbs" type="number" min="0" max="1000" step="any" placeholder="—"></div>
-       <div class="field"><label for="nutrition-custom-fat">الدهون (جم) — اختياري</label><input id="nutrition-custom-fat" name="fat" type="number" min="0" max="1000" step="any" placeholder="—"></div>
-       <div class="field"><label for="nutrition-custom-satfat">دهون مشبعة (جم) — اختياري</label><input id="nutrition-custom-satfat" name="satfat" type="number" min="0" max="1000" step="any" placeholder="—"></div>
+       <div class="field"><label for="nutrition-custom-basis">القيم لكل كام جرام؟</label><input id="nutrition-custom-basis" name="basis" type="number" min="1" max="10000" step="any" value="${basis}" required></div>
+       <div class="field"><label for="nutrition-custom-prep">حالة الأكل</label><select id="nutrition-custom-prep" name="prep">${option('packaged','منتج معبأ / بطاقة غذائية')}${option('cooked','مطبوخ')}${option('raw','نيّ')}${option('unknown','مش محدد')}</select></div>
+       <div class="field"><label for="nutrition-custom-kcal">السعرات على الملصق</label><input id="nutrition-custom-kcal" name="kcal" type="number" min="0" max="10000" step="any" value="${current.kcal===undefined?'':String(Math.round(current.kcal*basis))}" placeholder="مثال: 130" required></div>
+       <div class="field"><label for="nutrition-custom-protein">البروتين (جم) — اختياري</label><input id="nutrition-custom-protein" name="protein" type="number" min="0" max="1000" step="any" value="${labelValue('protein')}" placeholder="—"></div>
+       <div class="field"><label for="nutrition-custom-carbs">الكارب (جم) — اختياري</label><input id="nutrition-custom-carbs" name="carbs" type="number" min="0" max="1000" step="any" value="${labelValue('carbs')}" placeholder="—"></div>
+       <div class="field"><label for="nutrition-custom-fat">الدهون (جم) — اختياري</label><input id="nutrition-custom-fat" name="fat" type="number" min="0" max="1000" step="any" value="${labelValue('fat')}" placeholder="—"></div>
+       <div class="field"><label for="nutrition-custom-satfat">دهون مشبعة (جم) — اختياري</label><input id="nutrition-custom-satfat" name="satfat" type="number" min="0" max="1000" step="any" value="${labelValue('satfat')}" placeholder="—"></div>
       </div>
-      <button class="btn primary" type="submit">احفظ الصنف واستخدمه</button>
+      <div class="nutrition-form-actions"><button class="btn primary" type="submit">${isEdit?'احفظ تعديل الصنف':'احفظ الصنف واستخدمه'}</button>${isEdit?'<button class="btn" type="button" data-action="nutrition-cancel-custom">إلغاء</button>':''}</div>
      </form>
-     ${foods.length?`<div class="nutrition-custom-saved"><strong>أطعمتك المحفوظة (${foods.length})</strong><div class="nutrition-recent-list">${foods.slice(0,20).map(food=>`<button type="button" class="nutrition-recent-chip" data-action="nutrition-select" data-id="${escape(food.id)}">${escape(food.name)}</button>`).join('')}</div></div>`:''}
+     ${foods.length?`<div class="nutrition-custom-saved"><strong>أطعمتك المحفوظة (${foods.length})</strong><div class="nutrition-custom-rows">${foods.slice(0,30).map(food=>`<div class="nutrition-custom-row"><button class="nutrition-recent-chip" type="button" data-action="nutrition-select" data-id="${escape(food.id)}">${escape(food.name)}</button><button class="btn sm" type="button" data-action="nutrition-edit-custom" data-id="${escape(food.id)}">تعديل</button><button class="btn sm warn" type="button" data-action="nutrition-delete-custom" data-id="${escape(food.id)}">حذف</button></div>`).join('')}</div><small>حذف صنف من قائمتك مش هيحذف الوجبات اللي سجلتها منه قبل كده.</small></div>`:''}
     </details>`;
   }
   function previewHtml(item, amount) {
@@ -442,7 +447,7 @@
     const fd=new FormData(form),name=String(fd.get('name')||'').trim(),basis=Number(fd.get('basis'));
     if(!name||name.length>100)throw Error('اكتب اسم صنف واضح في حدود 100 حرف.');
     if(!Number.isFinite(basis)||basis<=0||basis>10000)throw Error('راجع وزن الحصة المكتوب على الملصق.');
-    if(customFoods().some(x=>clean(x.name)===clean(name)))throw Error('الصنف موجود في أطعمتك بالفعل؛ اختاره من البحث.');
+    if(customFoods().some(x=>clean(x.name)===clean(name)&&x.id!=='custom:'+editingCustomId))throw Error('الصنف موجود في أطعمتك بالفعل؛ اختاره من البحث.');
     const get=(key,required=false)=>{
       const raw=String(fd.get(key)||'').trim().replace(',','.');
       if(!raw)return required?NaN:null;
@@ -463,8 +468,10 @@
       satfat:vals[3]===null?null:vals[3]*ratio,prep,note,basis};
     if(food.kcal>1000||[food.protein,food.carbs,food.fat,food.satfat].some(v=>v!==null&&v>100.1))
       throw Error('القيم لكل 100 جم أعلى من المتوقع؛ راجع وزن الحصة والبيانات.');
-    const id='food-custom-'+crypto.randomUUID();
-    await save('food-custom',state.date,food,id);
+    const id=editingCustomId||'food-custom-'+crypto.randomUUID();
+    const existing=state.rows.find(row=>row.id===id&&row.collection==='food-custom');
+    await save('food-custom',existing?.date||state.date,food,id);
+    editingCustomId=null;
     selected={...food,id:'custom:'+id,source:'custom'};
     query='';resultQuery='';feedback='';
     render();notice('الصنف اتحفظ في حسابك، وتقدر تختاره وتضيف الكمية.');
@@ -482,7 +489,7 @@
   function edit(id) { const rec=state.rows.find(x=>x.id===id&&x.collection==='food');if(!rec)return;editingId=id;render();document.getElementById('nutrition-edit-grams')?.focus(); }
   function close() {editingId=null;render();}
   async function submit(form) {
-    if(form.dataset.form==='nutrition-custom'){await saveCustomFood(form);return;}
+    if(form.dataset.form==='nutrition-custom'||form.dataset.form==='nutrition-custom-edit'){await saveCustomFood(form);return;}
     if(form.dataset.form==='nutrition-barcode'){await searchBarcode(new FormData(form).get('code'));return;}
     const d = new FormData(form);
     const amount=Number(d.get('grams'));
@@ -503,6 +510,17 @@
     }
   }
   async function action(name, el, target) {
+    if(name==='nutrition-edit-custom') {const id=String(el.dataset.id||'').replace(/^custom:/,'');if(!state.rows.some(x=>x.id===id&&x.collection==='food-custom'))return;editingCustomId=id;render();document.getElementById('nutrition-custom-name')?.focus();return;}
+    if(name==='nutrition-cancel-custom') {editingCustomId=null;render();return;}
+    if(name==='nutrition-delete-custom') {
+      const id=String(el.dataset.id||'').replace(/^custom:/,'');
+      const row=state.rows.find(x=>x.id===id&&x.collection==='food-custom');
+      if(!row)return;
+      if(!confirm('تحذف "'+row.data.name+'" من أطعمتك المحفوظة؟ وجباتك القديمة هتفضل كما هي.'))return;
+      await erase('food-custom',id);if(editingCustomId===id)editingCustomId=null;
+      if(selected?.id==='custom:'+id)selected=null;
+      render();notice('اتحذف من قائمة أطعمتك المحفوظة.');return;
+    }
     if(name==='nutrition-search-online') {await searchOnline();return;}
     if(name==='nutrition-select') {select(el.dataset.id);return;}
     if(name==='nutrition-clear') {selected=null;render();return;}
