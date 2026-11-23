@@ -234,7 +234,7 @@ async function handleSubmit(e) {
     try {
         if (['quit-reasons','quit-reason-add','quit-reason-edit','quit-relapse'].includes(kind)) { await window.KhatwaQuit.submit(form); return; }
         if (kind === 'cloud-login' || kind === 'cloud-signup') { await window.KhotwaCloud.submit(form); return; }
-        if (['nutrition-add','nutrition-edit','nutrition-custom','nutrition-barcode'].includes(kind)) { await window.KhotwaNutrition.submit(form); return; }
+        if (['nutrition-add','nutrition-edit','nutrition-custom','nutrition-custom-edit','nutrition-barcode'].includes(kind)) { await window.KhotwaNutrition.submit(form); return; }
         if (kind === 'edit-record') { await window.KhotwaExperience.submitEdit(form); return; }
         if (kind === 'study') {
             let key = form.dataset.key || '';
