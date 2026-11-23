@@ -118,7 +118,7 @@
    startX=null;startY=null;
    if(Math.abs(dx)>72&&Math.abs(dx)>Math.abs(dy)*1.4)dismiss(id);
   });
-  while(live.size>MAX_VISIBLE)dismiss(live.keys().next().value);
+  while(live.size>MAX_VISIBLE)clean(live.values().next().value);
   schedule(entry);
   return id;
  }
