@@ -276,7 +276,7 @@
   function customHtml(){
     const foods=customFoods(),editRow=state.rows.find(x=>x.id===editingCustomId&&x.collection==='food-custom');
     const current=editRow?.data||{},isEdit=!!editRow,basis=Number(current.basis)||100;
-    const labelValue=key=>current[key]===null||current[key]===undefined?'':String(Math.round(current[key]*basis));
+    const labelValue=key=>current[key]===null||current[key]===undefined?'':String(Number((current[key]*basis/100).toFixed(2)));
     const selectedPrep=current.prep||'packaged';
     const option=(value,label)=>`<option value="${value}" ${selectedPrep===value?'selected':''}>${label}</option>`;
     return `<details class="nutrition-custom-panel" ${isEdit?'open':''}><summary><span>＋ ${isEdit?'تعديل الصنف المحفوظ':'أضف صنف مش موجود'}</span><small>من بطاقة المنتج أو معلومة موثوقة</small></summary>
@@ -286,7 +286,7 @@
       <div class="nutrition-custom-grid">
        <div class="field"><label for="nutrition-custom-basis">القيم لكل كام جرام؟</label><input id="nutrition-custom-basis" name="basis" type="number" min="1" max="10000" step="any" value="${basis}" required></div>
        <div class="field"><label for="nutrition-custom-prep">حالة الأكل</label><select id="nutrition-custom-prep" name="prep">${option('packaged','منتج معبأ / بطاقة غذائية')}${option('cooked','مطبوخ')}${option('raw','نيّ')}${option('unknown','مش محدد')}</select></div>
-       <div class="field"><label for="nutrition-custom-kcal">السعرات على الملصق</label><input id="nutrition-custom-kcal" name="kcal" type="number" min="0" max="10000" step="any" value="${current.kcal===undefined?'':String(Math.round(current.kcal*basis))}" placeholder="مثال: 130" required></div>
+       <div class="field"><label for="nutrition-custom-kcal">السعرات على الملصق</label><input id="nutrition-custom-kcal" name="kcal" type="number" min="0" max="10000" step="any" value="${current.kcal===undefined?'':String(Number((current.kcal*basis/100).toFixed(2)))}" placeholder="مثال: 130" required></div>
        <div class="field"><label for="nutrition-custom-protein">البروتين (جم) — اختياري</label><input id="nutrition-custom-protein" name="protein" type="number" min="0" max="1000" step="any" value="${labelValue('protein')}" placeholder="—"></div>
        <div class="field"><label for="nutrition-custom-carbs">الكارب (جم) — اختياري</label><input id="nutrition-custom-carbs" name="carbs" type="number" min="0" max="1000" step="any" value="${labelValue('carbs')}" placeholder="—"></div>
        <div class="field"><label for="nutrition-custom-fat">الدهون (جم) — اختياري</label><input id="nutrition-custom-fat" name="fat" type="number" min="0" max="1000" step="any" value="${labelValue('fat')}" placeholder="—"></div>
@@ -517,7 +517,7 @@
       const row=state.rows.find(x=>x.id===id&&x.collection==='food-custom');
       if(!row)return;
       if(!confirm('تحذف "'+row.data.name+'" من أطعمتك المحفوظة؟ وجباتك القديمة هتفضل كما هي.'))return;
-      await erase('food-custom',id);if(editingCustomId===id)editingCustomId=null;
+      await erase(id);if(editingCustomId===id)editingCustomId=null;
       if(selected?.id==='custom:'+id)selected=null;
       render();notice('اتحذف من قائمة أطعمتك المحفوظة.');return;
     }
