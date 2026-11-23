@@ -190,7 +190,7 @@ let smokeEditing=false;
 async function handleSubmit(e:SubmitEvent){let form=e.target;if(!(form instanceof HTMLFormElement)||!form.dataset.form)return;e.preventDefault();let kind=form.dataset.form;const get=(key:string)=>getFD(form,key),date=get('date')||state.date;const val=(key:string)=>safeNumber(get(key));try{
 if(['quit-reasons','quit-reason-add','quit-reason-edit','quit-relapse'].includes(kind)){await window.KhatwaQuit.submit(form);return;}
 if(kind==='cloud-login'||kind==='cloud-signup'){await window.KhotwaCloud.submit(form);return;}
-if(['nutrition-add','nutrition-edit','nutrition-custom','nutrition-barcode'].includes(kind)){await window.KhotwaNutrition.submit(form);return;}
+if(['nutrition-add','nutrition-edit','nutrition-custom','nutrition-custom-edit','nutrition-barcode'].includes(kind)){await window.KhotwaNutrition.submit(form);return;}
 if(kind==='edit-record'){await window.KhotwaExperience.submitEdit(form);return;}
 if(kind==='study'){let key=form.dataset.key||'';let sess=allSessions().find(x=>x.key===key);if(!sess)throw Error('الجلسة مش موجودة');if(get('status')==='completed'&& !get('notes')&&!get('evidence')){notice('قبل ما تقول خلصت: سجّل شرح بسيط أو دليل على التطبيق.','warning');return;}await save('learning',state.date,{key,phase:sess.phase.id,sprint:sess.sprint.id,status:get('status'),minutes:val('minutes'),source:get('source'),evidence:get('evidence'),notes:get('notes'),question:get('question'),self:get('self')},`learning-${key}`);go('learning');notice('اتحفظت الجلسة.');return;}
 if(kind==='english'){if(val('minutes')<=0)throw Error('سجل وقت الممارسة الفعلي');await save('english',date,{skill:get('skill'),minutes:val('minutes'),notes:get('notes')},`english-${date}`);state.date=date;}
