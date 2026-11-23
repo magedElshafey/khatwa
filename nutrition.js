@@ -338,11 +338,14 @@
     }
     const protein=get('proteins'), carbs=get('carbohydrates'), fat=get('fat'), satfat=get('saturated-fat');
     const name=String(p.product_name_ar||p.product_name||p.product_name_en||'').trim();
-    if (!name || [kcal,protein,carbs,fat].some(v=>v===null || v < 0)) return null;
-    if ([kcal,protein,carbs,fat].some(v=>v>2000)) return null;
-    const code=String(p.code || '').replace(/[^0-9]/g,'');
-    if(!code)return null;
-    return {id:'off:'+code,name,brand:String(p.brands||'').slice(0,110),en:'',kcal,protein,carbs,fat,satfat,code,source:'openfoodfacts',note:'من قاعدة بيانات مجتمعية؛ راجع بطاقة العبوة وطريقة التسوية.'};
+    const code=String(p.code||'').replace(/[^0-9]/g,'');
+    if(!name||!code||![kcal,protein,carbs,fat].some(v=>v!==null))return null;
+    if([kcal,protein,carbs,fat,satfat].some(v=>v!==null&&(v<0||v>2000)))return null;
+    if([protein,carbs,fat,satfat].some(v=>v!==null&&v>100))return null;
+    const missing=['calories','protein','carbs','fat'].filter((key,i)=>[kcal,protein,carbs,fat][i]===null);
+    return {id:'off:'+code,name:name.slice(0,140),brand:String(p.brands||'').slice(0,110),en:'',
+      kcal,protein,carbs,fat,satfat,code,source:'openfoodfacts',incomplete:missing.length>0,
+      note: missing.length?'منتج موجود لكن فيه قيم غذائية ناقصة في المصدر. الخانات الفاضية مش صفر. راجع بطاقة العبوة.':'قيم من قاعدة بيانات مجتمعية، راجع بطاقة العبوة.'};
   }
   function setInput(value) {
     query = String(value).slice(0,150);
@@ -374,17 +377,100 @@
     if(typeof fetch !== 'function') {feedback='البحث أونلاين مش متاح في المتصفح ده.';render();return;}
     busy=true;lastOnlineSearch=now;feedback='جاري البحث في المنتجات...';render();
     try {
-      const url='https://world.openfoodfacts.org/cgi/search.pl?'+new URLSearchParams({search_terms:term,search_simple:'1',action:'process',json:'1',page_size:'18',fields:'code,product_name,product_name_ar,product_name_en,brands,nutriments'}).toString();
+      const url='https://world.openfoodfacts.org/cgi/search.pl?'+new URLSearchParams({search_terms:term,search_simple:'1',action:'process',json:'1',page_size:'45',fields:'code,product_name,product_name_ar,product_name_en,brands,nutriments'}).toString();
       const response=await fetch(url,{method:'GET',headers:{'Accept':'application/json'}});
       if(!response.ok) throw new Error(response.status===429?'المصدر مشغول حاليًا؛ جرّب بعد شوية.':'تعذر الاتصال بالمصدر المجاني.');
       const payload=await response.json();
       if(!Array.isArray(payload.products))throw new Error('استجابة المصدر غير صالحة.');
-      external=payload.products.map(normalizeProduct).filter(Boolean).slice(0,14);
+      external=payload.products.map(normalizeProduct).filter(Boolean).slice(0,25);
       searchCache.set(clean(term),external);
-      feedback=external.length?'اختار منتجًا واقرأ بياناته قبل الإضافة.':'النتائج المتاحة ناقصة بيانات غذائية أو مفيش منتج مطابق؛ جرّب قائمة الأطعمة الشائعة.';
+      feedback=external.length?'راجع تفاصيل المنتج قبل إضافته. القيم الناقصة بتظهر كشرطة —، مش صفر.':'ملقيناش منتج مناسب بالاسم. جرّب الباركود أو احفظ صنف جديد من بطاقة العبوة.';
     } catch(err) { external=[]; feedback='البحث أونلاين غير متاح دلوقتي. تقدر تستخدم الأطعمة الشائعة بدون إنترنت. '+(err instanceof Error?err.message:''); }
     finally {busy=false;render();}
   }
+  function validateBarcode(value){
+    const code=latinDigits(value).replace(/[\s-]/g,'');
+    if(!/^[0-9]{8,14}$/.test(code))throw Error('اكتب باركود مكوّن من 8 إلى 14 رقم.');
+    return code;
+  }
+  async function searchBarcode(value){
+    const code=validateBarcode(value);
+    const cached=searchCache.get('barcode:'+code);
+    if(cached){selected=cached;external=[cached];resultQuery='';query=cached.name;feedback='لقينا المنتج من بحث سابق. راجع بياناته.';render();return cached}
+    if(barcodeBusy)return null;
+    if(typeof fetch!=='function')throw Error('البحث بالباركود يحتاج اتصال إنترنت.');
+    barcodeBusy=true;feedback='بندور على المنتج برقم الباركود…';render();
+    try{
+      const url='https://world.openfoodfacts.org/api/v2/product/'+encodeURIComponent(code)+'.json?'+new URLSearchParams({
+        fields:'code,product_name,product_name_ar,product_name_en,brands,nutriments,quantity,serving_size'
+      });
+      const res=await fetch(url,{headers:{Accept:'application/json'}});
+      if(!res.ok)throw Error('تعذر تحميل بيانات المنتج؛ جرب لاحقًا.');
+      const payload=await res.json();
+      if(payload.status!==1||!payload.product)throw Error('المنتج ده مش مسجّل في Open Food Facts. تقدر تضيفه من بيانات العبوة.');
+      const food=normalizeProduct({...payload.product,code:payload.product.code||code});
+      if(!food)throw Error('المنتج موجود لكن قيمه الغذائية غير متاحة. أضفه يدويًا من بطاقة العبوة.');
+      searchCache.set('barcode:'+code,food);
+      selected=food;external=[food];query=food.name;resultQuery='';
+      feedback=food.incomplete?'لقينا المنتج، لكن فيه بيانات ناقصة. راجع الملصق قبل الاعتماد عليها.':'لقينا المنتج. راجع اسم العبوة والقيم قبل الإضافة.';
+      return food;
+    }catch(err){feedback=String(err.message||err);return null}
+    finally{barcodeBusy=false;render()}
+  }
+  async function scanBarcodePhoto(input){
+    const file=input?.files?.[0];
+    if(!file)return;
+    try{
+      if(file.size>12*1024*1024)throw Error('اختار صورة أصغر من 12 ميجابايت.');
+      if(typeof window==='undefined'||typeof window.BarcodeDetector!=='function'){
+        throw Error('متصفحك لا يدعم قراءة الباركود من الصورة تلقائيًا. استخدم كاميرا الموبايل لقراءة الرقم أو اكتبه هنا.');
+      }
+      if(typeof createImageBitmap!=='function')throw Error('المتصفح لا يدعم تحليل الصورة محليًا. اكتب رقم الباركود بدلًا منها.');
+      const bitmap=await createImageBitmap(file);
+      let codes=[];
+      try{
+        const decoder=new window.BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128']});
+        codes=await decoder.detect(bitmap);
+      }finally{bitmap.close?.()}
+      const raw=codes.map(x=>String(x.rawValue||'')).find(x=>/^\d{8,14}$/.test(x));
+      if(!raw)throw Error('الصورة مش واضحة كفاية أو الباركود مش مدعوم. جرّب رقم العبوة يدويًا.');
+      await searchBarcode(raw);
+    }catch(err){feedback=String(err.message||err);render()}
+    finally{input.value=''}
+  }
+  async function saveCustomFood(form){
+    const fd=new FormData(form),name=String(fd.get('name')||'').trim(),basis=Number(fd.get('basis'));
+    if(!name||name.length>100)throw Error('اكتب اسم صنف واضح في حدود 100 حرف.');
+    if(!Number.isFinite(basis)||basis<=0||basis>10000)throw Error('راجع وزن الحصة المكتوب على الملصق.');
+    if(customFoods().some(x=>clean(x.name)===clean(name)))throw Error('الصنف موجود في أطعمتك بالفعل؛ اختاره من البحث.');
+    const get=(key,required=false)=>{
+      const raw=String(fd.get(key)||'').trim().replace(',','.');
+      if(!raw)return required?NaN:null;
+      const val=Number(raw);
+      return Number.isFinite(val)&&val>=0?val:NaN;
+    };
+    const calorie=get('kcal',true);
+    if(!Number.isFinite(calorie)||calorie>10000)throw Error('راجع السعرات المكتوبة على بطاقة المنتج.');
+    const fields=['protein','carbs','fat','satfat'];
+    const vals=fields.map(key=>get(key));
+    if(vals.some(v=>v!==null&&(!Number.isFinite(v)||v>basis)))throw Error('راجع القيم الغذائية ووزن الحصة.');
+    if(vals[3]!==null&&vals[2]!==null&&vals[3]>vals[2])throw Error('الدهون المشبعة ما ينفعش تكون أعلى من الدهون الكلية.');
+    const ratio=100/basis,prep=String(fd.get('prep')||'unknown');
+    if(!['packaged','cooked','raw','unknown'].includes(prep))throw Error('اختار نوع الوزن.');
+    const note='قيم حسب البيانات اللي كتبتها لكل '+basis+' جم؛ حالة الأكل: '+({packaged:'منتج معبأ',cooked:'مطبوخ',raw:'نيّ',unknown:'غير محددة'}[prep])+'. راجع الملصق عند اختلاف المنتج.';
+    const food={name,kcal:calorie*ratio,protein:vals[0]===null?null:vals[0]*ratio,
+      carbs:vals[1]===null?null:vals[1]*ratio,fat:vals[2]===null?null:vals[2]*ratio,
+      satfat:vals[3]===null?null:vals[3]*ratio,prep,note,basis};
+    if(food.kcal>1000||[food.protein,food.carbs,food.fat,food.satfat].some(v=>v!==null&&v>100.1))
+      throw Error('القيم لكل 100 جم أعلى من المتوقع؛ راجع وزن الحصة والبيانات.');
+    const id='food-custom-'+crypto.randomUUID();
+    await save('food-custom',state.date,food,id);
+    selected={...food,id:'custom:'+id,source:'custom'};
+    query='';resultQuery='';feedback='';
+    render();notice('الصنف اتحفظ في حسابك، وتقدر تختاره وتضيف الكمية.');
+    return selected;
+  }
+
   function handleInput(event) {
     const target=event.target;
     if(target?.id==='nutrition-food-search'){setInput(target.value);return;}
@@ -396,6 +482,8 @@
   function edit(id) { const rec=state.rows.find(x=>x.id===id&&x.collection==='food');if(!rec)return;editingId=id;render();document.getElementById('nutrition-edit-grams')?.focus(); }
   function close() {editingId=null;render();}
   async function submit(form) {
+    if(form.dataset.form==='nutrition-custom'){await saveCustomFood(form);return;}
+    if(form.dataset.form==='nutrition-barcode'){await searchBarcode(new FormData(form).get('code'));return;}
     const d = new FormData(form);
     const amount=Number(d.get('grams'));
     const chosenMeal=String(d.get('meal')||'');
@@ -424,5 +512,5 @@
       close();return;
     }
   }
-  window.KhotwaNutrition={view,calc,totals,parseQuery,normalizeProduct,localMatches,handleInput,action,submit,edit,close,dataFromFood,mealInfo};
+  window.KhotwaNutrition={view,calc,totals,parseQuery,normalizeProduct,localMatches,handleInput,action,submit,edit,close,dataFromFood,mealInfo,customFoods,recentFoods,validateBarcode,searchBarcode,scanBarcodePhoto,saveCustomFood};
 }());
