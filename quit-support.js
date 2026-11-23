@@ -1,7 +1,7 @@
 /* Khatwa quitting companion — automatic clock, personal motivations and supportive slip logging. */
 (function(){
  'use strict';
- let reasonsEditing=false,dialog='',previousFocus=null,started=false;
+ let reasonsEditing=false,reasonEditingIndex=null,reasonDeleteIndex=null,dialog='',previousFocus=null,started=false;
  const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const names=()=>Array.isArray(state.settings.quitReasons)?state.settings.quitReasons.filter(x=>typeof x==='string'&&x.trim()).slice(0,12):[];
  const nowLocal=()=>{
@@ -47,11 +47,42 @@
   window.addEventListener('keydown',event=>{if(event.key==='Escape'&&dialog){close();}});
  }
  function reasonsCard(){
-  const reasons=names();
-  return `<section class="quit-reasons-pin" aria-label="أسبابك الشخصية للإقلاع">
-    <div class="quit-reasons-heading"><div><span class="quit-reasons-kicker">افتكر أنت بدأت ليه</span><h2>أسبابك للإقلاع</h2></div><button class="btn sm" type="button" data-action="quit-edit-reasons">${reasonsEditing?'إلغاء التعديل':reasons.length?'تعديل الأسباب':'ضيف أسبابك'}</button></div>
-    ${reasons.length?`<ul class="quit-reasons-list">${reasons.map(item=>`<li><span aria-hidden="true">✓</span><span>${esc(item)}</span></li>`).join('')}</ul>`:'<p class="quit-reasons-empty">اكتب الأسباب اللي تهمك أنت. هتفضل قدامك هنا كل ما تفتح متابعة الإقلاع.</p>'}
-    ${reasonsEditing?`<form data-form="quit-reasons" class="quit-reasons-form"><label for="quit-reasons-text">اكتب كل سبب في سطر مستقل</label><textarea id="quit-reasons-text" name="reasons" rows="4" maxlength="2500" placeholder="مثال: نفسي أتنفس براحة&#10;عاوز أوفر فلوسي">${esc(reasons.join('\n'))}</textarea><small>الأسباب شخصية ومش هنضيف أسباب من عندنا. الحد الأقصى 12 سبب.</small><button class="btn primary sm" type="submit">حفظ أسبابي</button></form>`:''}
+  const reasons=names(),total=reasons.length,featured=reasons[0];
+  const tools=(i)=>`<div class="quit-reason-tools">
+   <button type="button" class="quit-reason-icon-btn" data-action="quit-reason-up" data-index="${i}" ${i===0?'disabled':''} aria-label="تحريك السبب لأعلى" title="تحريك لأعلى">↑</button>
+   <button type="button" class="quit-reason-icon-btn" data-action="quit-reason-down" data-index="${i}" ${i===total-1?'disabled':''} aria-label="تحريك السبب لأسفل" title="تحريك لأسفل">↓</button>
+   <button type="button" class="quit-reason-tool-btn" data-action="quit-reason-open-edit" data-index="${i}" aria-label="تعديل السبب رقم ${i+1}">تعديل</button>
+   <button type="button" class="quit-reason-tool-btn quit-reason-tool-danger" data-action="quit-reason-delete" data-index="${i}" aria-label="حذف السبب رقم ${i+1}">حذف</button>
+  </div>`;
+  const rows=reasons.map((reason,i)=>`<div class="quit-reason-manage-row">
+    <span class="quit-reason-num">${String(i+1).padStart(2,'0')}</span>
+    <div class="quit-reason-manage-body">
+     ${reasonEditingIndex===i?`<form data-form="quit-reason-edit" data-index="${i}" class="quit-reason-edit-form"><label for="quit-reason-edit-${i}">تعديل السبب</label><div class="quit-reason-edit-controls"><input id="quit-reason-edit-${i}" type="text" name="reason" maxlength="160" value="${esc(reason)}" required><button type="submit" class="btn primary sm">حفظ</button><button type="button" class="btn sm" data-action="quit-reason-cancel-edit">إلغاء</button></div></form>`:`<span class="quit-reason-manage-text">${esc(reason)}</span>${tools(i)}`}
+     ${reasonDeleteIndex===i&&reasonEditingIndex!==i?`<div class="quit-reason-delete-check" role="group" aria-label="تأكيد حذف السبب"><span>تحذف السبب ده؟</span><button type="button" class="btn sm warn" data-action="quit-reason-delete-confirm" data-index="${i}">تأكيد الحذف</button><button type="button" class="btn sm" data-action="quit-reason-cancel-delete">إلغاء</button></div>`:''}
+    </div>
+   </div>`).join('');
+  return `<section class="quit-reasons-pin" aria-label="أهم سبب شخصي للإقلاع">
+    <div class="quit-reasons-lead">
+      <span class="quit-reasons-symbol" aria-hidden="true">✳</span>
+      <div class="quit-reasons-highlight">
+        <span class="quit-reasons-kicker">افتكر أنت بدأت ليه</span>
+        <strong class="quit-reasons-featured">${featured?esc(featured):'إيه أكتر سبب يخليك تكمل؟'}</strong>
+        <span class="quit-reasons-count">${total?`السبب الأول من ${total} ${total===1?'سبب محفوظ':'أسباب محفوظة'}`:'السبب اللي تكتبه الأول هيفضل ظاهر قدامك هنا'}</span>
+      </div>
+    </div>
+    <button type="button" class="quit-reasons-manage-toggle" data-action="quit-edit-reasons" aria-expanded="${reasonsEditing}" aria-controls="quit-reasons-content">${reasonsEditing?'تم':'إدارة الأسباب'}</button>
+  </section>
+  <section class="quit-reasons-overview" id="quit-reasons-content" aria-label="أسبابك الشخصية للإقلاع">
+    ${reasonsEditing?`<div class="quit-reasons-manager">
+       <div class="quit-reasons-section-head"><div><h3>رتّب وعدّل أسبابك</h3><p>السبب الأول هو اللي هيفضل قدامك أثناء التمرير. كل تعديل بيتحفظ تلقائيًا.</p></div><span class="quit-reasons-counter">${total} / 12</span></div>
+       ${rows||'<p class="quit-reasons-empty">ضيف أول سبب ليك من الخانة اللي تحت.</p>'}
+    </div>`:total>1?`<div class="quit-reasons-section-head"><div><h3>وباقي أسبابك…</h3><p>كل واحد منهم مهم، ومتاح كمان وقت ما تحتاج دعم.</p></div><span class="quit-reasons-counter">${total} أسباب</span></div>
+      <ul class="quit-reasons-grid">${reasons.slice(1).map((reason,i)=>`<li class="quit-reason-tile"><span class="quit-reason-tile-number">${String(i+2).padStart(2,'0')}</span><span class="quit-reason-tile-text">${esc(reason)}</span></li>`).join('')}</ul>`:total===0?'<p class="quit-reasons-empty">اكتب الأسباب اللي بتفرق معاك أنت. مفيش إجابة صح أو غلط.</p>':''}
+    <form data-form="quit-reason-add" class="quit-reason-compose">
+      <div class="quit-reason-compose-copy"><label for="quit-reason-new">${total?'ضيف سبب جديد':'ضيف أسبابك'}</label><span>اكتب سبب واحد في كل مرة، وتقدر تعدله أو ترتبه بعد كده.</span></div>
+      <div class="quit-reason-compose-fields"><input id="quit-reason-new" type="text" name="reason" maxlength="160" placeholder="إيه اللي بيشجعك تكمل؟" autocomplete="off" ${total>=12?'disabled':''} required><button type="submit" class="btn primary" ${total>=12?'disabled':''}>+ إضافة</button></div>
+      <small>${total>=12?'وصلت للحد الأقصى (12 سبب). تقدر تعدّل أو تحذف سبب من إدارة الأسباب.':`${total} من 12 سبب محفوظ`}</small>
+    </form>
   </section>`;
  }
  function slipHistory(){
@@ -92,8 +123,26 @@
  function focusDialog(){if(typeof document==='undefined')return;setTimeout(()=>{document.querySelector('.quit-dialog [data-action="quit-close"]')?.focus()},0);}
  function open(stage){previousFocus=typeof document==='undefined'?null:document.activeElement;dialog=stage;render();focusDialog();}
  function close(){dialog='';render();if(previousFocus?.isConnected)previousFocus.focus?.();previousFocus=null;}
- function action(a){
-  if(a==='quit-edit-reasons'){reasonsEditing=!reasonsEditing;render();return true;}
+ async function action(a,element){
+  if(a==='quit-edit-reasons'){reasonsEditing=!reasonsEditing;reasonEditingIndex=null;reasonDeleteIndex=null;render();return true;}
+  if(a==='quit-reason-cancel-edit'){reasonEditingIndex=null;render();return true;}
+  if(a==='quit-reason-cancel-delete'){reasonDeleteIndex=null;render();return true;}
+  if(a==='quit-reason-open-edit'){const i=Number(element?.dataset?.index);if(!Number.isInteger(i)||i<0||i>=names().length)return true;reasonEditingIndex=i;reasonDeleteIndex=null;render();return true;}
+  if(a==='quit-reason-delete'){const i=Number(element?.dataset?.index);if(!Number.isInteger(i)||i<0||i>=names().length)return true;reasonDeleteIndex=i;reasonEditingIndex=null;render();return true;}
+  if(a==='quit-reason-delete-confirm'){
+   const i=Number(element?.dataset?.index),items=names();
+   if(!Number.isInteger(i)||i!==reasonDeleteIndex||!items[i])return true;
+   items.splice(i,1);
+   await saveSettings({...state.settings,quitReasons:items});
+   reasonDeleteIndex=null;reasonEditingIndex=null;render();window.KhatwaToast.success('السبب اتحذف من قائمتك.');return true;
+  }
+  if(a==='quit-reason-up'||a==='quit-reason-down'){
+   const i=Number(element?.dataset?.index),items=names(),j=i+(a==='quit-reason-up'?-1:1);
+   if(!Number.isInteger(i)||i<0||i>=items.length||j<0||j>=items.length)return true;
+   [items[i],items[j]]=[items[j],items[i]];
+   await saveSettings({...state.settings,quitReasons:items});
+   reasonEditingIndex=null;reasonDeleteIndex=null;render();window.KhatwaToast.success('ترتيب الأسباب اتحفظ.');return true;
+  }
   if(a==='quit-urge'||a==='quit-record-open'){open('urge');return true;}
   if(a==='quit-actually-smoked'){dialog='record';render();focusDialog();return true;}
   if(a==='quit-back'){dialog='urge';render();focusDialog();return true;}
@@ -102,6 +151,24 @@
   return false;
  }
  async function submit(form){
+  if(form.dataset.form==='quit-reason-add'){
+   const reason=String(new FormData(form).get('reason')||'').trim();
+   const items=names();
+   if(!reason||reason.length>160)throw Error('اكتب سبب واضح لا يزيد عن 160 حرفًا.');
+   if(items.length>=12)throw Error('تقدر تحتفظ بحد أقصى 12 سبب.');
+   if(items.some(item=>item.toLocaleLowerCase('ar')===reason.toLocaleLowerCase('ar')))throw Error('السبب ده موجود بالفعل.');
+   await saveSettings({...state.settings,quitReasons:[...items,reason]});
+   reasonEditingIndex=null;reasonDeleteIndex=null;render();window.KhatwaToast.success('سببك الجديد اتحفظ.');return true;
+  }
+  if(form.dataset.form==='quit-reason-edit'){
+   const i=Number(form.dataset.index),items=names(),reason=String(new FormData(form).get('reason')||'').trim();
+   if(!Number.isInteger(i)||i<0||i>=items.length)throw Error('السبب اللي بتعدّله مش موجود.');
+   if(!reason||reason.length>160)throw Error('اكتب سبب واضح لا يزيد عن 160 حرفًا.');
+   if(items.some((item,j)=>i!==j&&item.toLocaleLowerCase('ar')===reason.toLocaleLowerCase('ar')))throw Error('السبب ده موجود بالفعل.');
+   items[i]=reason;
+   await saveSettings({...state.settings,quitReasons:items});
+   reasonEditingIndex=null;reasonDeleteIndex=null;render();window.KhatwaToast.success('تعديل السبب اتحفظ.');return true;
+  }
   if(form.dataset.form==='quit-reasons'){
    const raw=String(new FormData(form).get('reasons')||'');
    const lines=[...new Set(raw.split(/\r?\n/).map(x=>x.trim()).filter(Boolean))];
