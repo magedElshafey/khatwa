@@ -5,7 +5,7 @@
   "description": "Khotwa — Arabic offline-first personal learning and life dashboard",
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/build.cjs",
-    "test": "node tests/verify.cjs && node tests/cloud-flow.cjs && node tests/toasts.cjs && node tests/quit-support.cjs",
+    "test": "node tests/verify.cjs && node tests/cloud-flow.cjs && node tests/toasts.cjs && node tests/quit-support.cjs && node tests/nutrition-v3.cjs",
     "preview": "npx serve public",
     "check": "npm run build && npm test"
   },

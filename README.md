@@ -103,3 +103,12 @@ The previous single `.alert` element was replaced with a tiny, dependency-free `
 - Additional reasons appear as a responsive card collection. A one-line composer adds one reason at a time, with duplicate and length validation.
 - "إدارة الأسباب" lets users edit each reason inline, reorder with accessible up/down buttons (the first reason becomes the featured reminder) and delete with a visible two-step confirmation. All individual edits sync through the existing settings service.
 - The urge support dialog continues to show **all** reasons, not just the featured reason.
+
+## Nutrition v3 — broader food discovery and honest product information
+
+- Expanded local generic food examples, including familiar Egyptian ingredients and normalized Arabic spelling/search synonyms. **Reference values are only approximate** and vary with preparation, sauce, edible portion and brand.
+- Users can save a **custom food** by copying the nutrition label per 100 grams or another explicitly entered serving weight. Values are normalized per 100 grams and saved to the existing per-user offline IndexedDB / Supabase record sync as `food-custom`; never upload a photo or private information to a third party. Missing macros remain unknown, not zero.
+- **Recent foods** make previously logged products easy to select again.
+- **Barcode lookup** uses the public Open Food Facts v2 product endpoint and the number typed by the user. It may return a partially documented product (missing nutrients remain `null`), or no product if absent in the community database.
+- Barcode photo upload tries browser-native `BarcodeDetector` when supported. The image is scanned **on-device only**, and only a decoded barcode number is sent to Open Food Facts; if unavailable, there is an honest manual-entry fallback. iOS Safari support varies. **It does not estimate the calories of plated meals from a photo**, which would require secure server-side image recognition and user review.
+- For photos of complete meals, never present an unverified visual calorie estimate as fact: food ingredients, hidden oils, preparation and serving weight cannot be determined reliably from appearance alone.

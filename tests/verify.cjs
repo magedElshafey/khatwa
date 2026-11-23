@@ -66,9 +66,19 @@ assert.equal(nutrition.totals(dayFoods).sum.protein,11.1,'daily protein total br
 assert.equal(nutrition.totals(dayFoods).sum.fat,4.3,'daily fat total broken');
 assert.equal(nutrition.totals(dayFoods.concat([{data:{grams:50,name:'legacy'},date:'2026-11-22'}])).unknown.fat,1,'missing legacy nutrients cannot be treated as zero');
 assert(nutrition.normalizeProduct({code:'12345',product_name:'Demo',nutriments:{'energy-kcal_100g':200,'proteins_100g':10,'carbohydrates_100g':20,'fat_100g':8}}),'Open Food Facts normalization broken');
-assert.equal(nutrition.normalizeProduct({code:'12345',product_name:'Incomplete',nutriments:{'energy-kcal_100g':200}}),null,'incomplete product must be rejected');
+const partialProduct=nutrition.normalizeProduct({code:'12345',product_name:'Incomplete',nutriments:{'energy-kcal_100g':200}});
+assert(partialProduct&&partialProduct.incomplete,'partial product data should be discoverable, not hidden');
+assert.equal(partialProduct.protein,null,'missing protein must remain unknown, not zero');
+assert(nutrition.localMatches('فول مدمس').some(x=>x.id==='ref:ful'),'expanded common Egyptian foods missing');
+assert(nutrition.localMatches('فراخ').some(x=>x.id==='ref:chicken-breast'),'Arabic food synonyms not supported');
+assert(nutrition.localMatches('رز بسمتي').some(x=>x.id==='ref:basmati'),'rice synonym missing');
+assert.equal(nutrition.validateBarcode('٣٠١٧٦٢٠٤٢٢٠٠٣'),'3017620422003','Arabic barcode digits should normalize');
 const nutritionHtml=vm.runInContext('viewNutrition()',ctx);
 assert(nutritionHtml.includes('nutrition-food-search')&&nutritionHtml.includes('الإفطار'),'nutrition UI unavailable');
+assert(nutritionHtml.includes('data-form="nutrition-custom"'),'custom food form missing');
+assert(nutritionHtml.includes('data-form="nutrition-barcode"'),'barcode form missing');
+assert(nutritionHtml.includes('nutrition-barcode-photo'),'photo barcode input missing');
+assert(nutritionHtml.includes('nutrition-custom-basis'),'packaged per-serving baseline missing');
 assert(text('index.html').includes('src="./nutrition.js"'),'nutrition script missing in entry');
 
 

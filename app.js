@@ -234,7 +234,7 @@ async function handleSubmit(e) {
     try {
         if (['quit-reasons','quit-reason-add','quit-reason-edit','quit-relapse'].includes(kind)) { await window.KhatwaQuit.submit(form); return; }
         if (kind === 'cloud-login' || kind === 'cloud-signup') { await window.KhotwaCloud.submit(form); return; }
-        if (kind === 'nutrition-add' || kind === 'nutrition-edit') { await window.KhotwaNutrition.submit(form); return; }
+        if (['nutrition-add','nutrition-edit','nutrition-custom','nutrition-custom-edit','nutrition-barcode'].includes(kind)) { await window.KhotwaNutrition.submit(form); return; }
         if (kind === 'edit-record') { await window.KhotwaExperience.submitEdit(form); return; }
         if (kind === 'study') {
             let key = form.dataset.key || '';
@@ -337,7 +337,8 @@ async function handleChange(e) {
     if (!(t instanceof HTMLInputElement))
         return;
     try {
-        if (t.id === 'global-date') {
+        if (t.id === 'nutrition-barcode-photo') { await window.KhotwaNutrition.scanBarcodePhoto(t); return; }
+if (t.id === 'global-date') {
             if (t.value)
                 state.date = t.value;
             render();

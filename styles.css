@@ -455,3 +455,43 @@ html{scrollbar-gutter:stable}
  .quit-reason-edit-controls input{flex-basis:100%}
 }
 @media(prefers-reduced-motion:reduce){.quit-reasons-manage-toggle,.quit-reason-icon-btn,.quit-reason-tool-btn{transition:none}}
+
+
+/* Nutrition discovery v3: custom products, barcode lookup and fast repeat entries. */
+.nutrition-recent{margin-top:17px}
+.nutrition-recent-list{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0 14px}
+.nutrition-recent-chip{display:inline-flex;align-items:center;min-height:35px;padding:7px 11px;border-radius:999px;border:1px solid var(--line);background:var(--paper);color:var(--ink);font-family:inherit;font-size:11px;line-height:1.65;text-align:right;overflow-wrap:anywhere;max-width:100%;cursor:pointer}
+.nutrition-recent-chip:hover,.nutrition-recent-chip:focus-visible{border-color:var(--mint);background:var(--mint-light)}
+.nutrition-barcode-panel{margin-top:17px;padding:15px;background:var(--bg);border:1px solid var(--line);border-radius:14px}
+.nutrition-barcode-panel .hint{font-size:11px;line-height:1.8;margin:6px 0 12px}
+.nutrition-barcode-form{display:flex;align-items:end;gap:10px;flex-wrap:wrap}
+.nutrition-barcode-form .nutrition-search-label{flex:1 1 180px}
+.nutrition-barcode-form .btn{min-height:45px}
+.nutrition-photo-barcode-btn{margin-top:12px;min-height:40px;display:inline-flex;align-items:center;gap:9px;justify-content:center;cursor:pointer;border:1px solid var(--line);border-radius:11px;padding:8px 13px;color:var(--ink);background:var(--paper);font-size:12px;font-weight:700}
+.nutrition-photo-barcode-btn:hover{background:var(--mint-light);border-color:var(--mint)}
+.nutrition-photo-barcode-btn>span{font-size:20px;color:var(--mint);line-height:1}
+.nutrition-file-input{position:absolute!important;width:1px!important;height:1px!important;opacity:0;overflow:hidden}
+.nutrition-file-input:focus-visible+.nutrition-photo-barcode-btn,.nutrition-photo-barcode-btn:focus-within{outline:2px solid var(--mint);outline-offset:2px}
+.nutrition-barcode-panel>small{display:block;margin-top:10px;color:var(--muted);font-size:10px;line-height:1.8}
+.nutrition-custom-panel{margin-top:17px;border:1px solid var(--line);border-radius:14px;background:var(--paper);padding:0 14px}
+.nutrition-custom-panel>summary{display:flex;align-items:center;justify-content:space-between;gap:15px;cursor:pointer;list-style:none;min-height:54px;font-size:13px;font-weight:900;color:var(--ink)}
+.nutrition-custom-panel>summary::-webkit-details-marker{display:none}
+.nutrition-custom-panel>summary small{font-size:10px;font-weight:500;color:var(--muted);text-align:end}
+.nutrition-custom-panel[open]>summary{border-bottom:1px solid var(--line)}
+.nutrition-custom-panel>.hint{line-height:1.8;font-size:11px;margin:11px 0 14px}
+.nutrition-custom-form{display:flex;flex-direction:column;gap:13px;margin-bottom:15px}
+.nutrition-custom-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.nutrition-custom-form .btn{align-self:start;min-height:43px}
+.nutrition-custom-form input,.nutrition-custom-form select{font-variant-numeric:tabular-nums}
+.nutrition-custom-saved{border-top:1px solid var(--line);padding:14px 0 4px}
+.nutrition-custom-saved strong{font-size:12px}
+.nutrition-source.custom{color:var(--violet)}
+@media(max-width:700px){.nutrition-barcode-panel{padding:12px}.nutrition-barcode-form{align-items:stretch}.nutrition-barcode-form .btn{width:100%}.nutrition-custom-panel{padding:0 11px}.nutrition-custom-grid{grid-template-columns:1fr}.nutrition-custom-panel>summary small{display:none}.nutrition-recent-list{gap:6px}}
+
+
+.nutrition-custom-rows{display:flex;flex-direction:column;gap:8px;margin:10px 0}
+.nutrition-custom-row{display:flex;align-items:center;flex-wrap:wrap;gap:7px;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.nutrition-custom-row .nutrition-recent-chip{flex:1;min-width:130px;justify-content:flex-start;background:var(--paper);border-color:transparent;border-radius:8px}
+.nutrition-custom-row .btn{padding:5px 10px;font-size:11px}
+.nutrition-custom-saved>small{display:block;color:var(--muted);font-size:10px;line-height:1.8;margin-bottom:12px}
+@media(max-width:480px){.nutrition-custom-row .nutrition-recent-chip{min-width:100%;justify-content:flex-start}.nutrition-custom-row .btn{min-height:35px}}
