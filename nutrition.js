@@ -49,6 +49,64 @@
     id: 'ref:' + id, name, en, kcal, protein, carbs, fat, satfat,
     source: 'reference', note: note || 'تقدير مرجعي لصنف عام، مش بطاقة منتج بعينه'
   }));
+
+  // More unbranded examples. As with all reference foods, these are approximate
+  // values for edible portions, NOT values for a specific Egyptian recipe/brand.
+  const ADDITIONAL_FOODS = [
+    ['ful','فول مدمس مسلوق بدون زيت','plain cooked fava beans',110,7.6,19.7,0.4,0.1],
+    ['white-beans','فاصوليا بيضاء مسلوقة بدون زيت','boiled white beans',139,9.7,25.1,0.4,0.1],
+    ['bulgur','برغل مطبوخ بدون زيت','cooked bulgur',83,3.1,18.6,0.2,0.05],
+    ['brown-rice','أرز بني مطبوخ','cooked brown rice',112,2.3,23.5,0.8,0.2],
+    ['tuna-water','تونة مصفاة محفوظة في الماء','canned tuna in water drained',116,25.5,0,0.8,0.2],
+    ['tuna-oil','تونة مصفاة محفوظة في الزيت','canned tuna in oil drained',198,29,0,8.2,1.4],
+    ['sardines','سردين معلب مع العظام','canned sardines',208,24.6,0,11.5,1.5],
+    ['salmon','سلمون مطبوخ','cooked salmon',206,22.1,0,12.4,3.1],
+    ['turkey-breast','صدر رومي مطبوخ بدون جلد','cooked turkey breast',135,29,0,1.7,0.5],
+    ['greek-yogurt','زبادي يوناني سادة قليل الدسم','plain low fat greek yogurt',73,10,3.9,1.9,1.2],
+    ['feta','جبنة فيتا','feta cheese',264,14.2,4.1,21.3,14.9],
+    ['peanut-butter','زبدة فول سوداني بدون سكر','unsweetened peanut butter',588,25,20,50,10],
+    ['almonds','لوز نيّ','raw almonds',579,21.2,21.6,49.9,3.8],
+    ['walnuts','عين جمل نيّ','raw walnuts',654,15.2,13.7,65.2,6.1],
+    ['orange','برتقال','orange',47,0.9,11.8,0.1,0],
+    ['grapes','عنب','grapes',69,0.7,18.1,0.2,0.1],
+    ['watermelon','بطيخ','watermelon',30,0.6,7.6,0.2,0],
+    ['strawberries','فراولة','strawberries',32,0.7,7.7,0.3,0],
+    ['avocado','أفوكادو','avocado',160,2,8.5,14.7,2.1],
+    ['zucchini','كوسة مطبوخة بدون زيت','cooked zucchini',17,1.2,3.1,0.3,0.1],
+    ['bell-pepper','فلفل رومي أخضر نيّ','raw green bell pepper',20,0.9,4.6,0.2,0.1],
+    ['onion','بصل نيّ','raw onion',40,1.1,9.3,0.1,0],
+    ['lettuce','خس نيّ','raw lettuce',15,1.4,2.9,0.2,0],
+    ['corn','ذرة حلوة مسلوقة بدون إضافات','boiled sweet corn',96,3.4,21,1.5,0.2],
+    ['popcorn','فشار بدون زيت أو زبدة','air popped popcorn',387,12.9,77.8,4.5,0.6],
+    ['oatmeal','شوفان مطبوخ بالمياه','oats cooked in water',71,2.5,12,1.5,0.3],
+    ['wholewheat-bread','توست أسمر قمح كامل','whole wheat bread',247,13,41,4.2,0.9],
+    ['chicken-whole','فراخ مشوية بدون جلد (جزء مأكول)','grilled chicken skinless meat',190,27,0,8.8,2.4],
+    ['minced-beef','لحمة مفرومة مطبوخة قليلة الدهن','cooked lean ground beef',217,26,0,12,4.5],
+    ['vegetable-mix','خضار مشكل مسلوق بدون زيت','boiled mixed vegetables',55,2.4,11,0.4,0.1]
+  ].map(([id,name,en,kcal,protein,carbs,fat,satfat])=>({
+    id:'ref:'+id,name,en,kcal,protein,carbs,fat,satfat,source:'reference',
+    note:'قيمة تقريبية لصنف عام. طريقة التسوية والإضافات والمنتج قد تغيّر القيم.'
+  }));
+  CATALOG.push(...ADDITIONAL_FOODS);
+  const SEARCH_ALIASES={
+    'ref:ful':'فول فول مدمس فوا beans',
+    'ref:cottage-full':'جبنه قريش جبنة قريش فلاحي',
+    'ref:cottage-light':'جبنه قريش لايت',
+    'ref:chicken-breast':'فراخ دجاج صدر فرخة فراخ مشوي صدور',
+    'ref:chicken-thigh':'فراخ دجاج وراك فخدة',
+    'ref:chicken-whole':'نص فرخة ربع فرخة فراخ دجاج مشوي',
+    'ref:cooked-rice':'رز ارز مصري مسلوق مطبوخ',
+    'ref:basmati':'رز بسمتي',
+    'ref:potato':'بطاطس بطاطا افرنجي مسلوق',
+    'ref:sweet-potato':'بطاطا حلوة بطاطا مشويه',
+    'ref:tuna-water':'تونه تونة بالمية',
+    'ref:tuna-oil':'تونه تونة بالزيت',
+    'ref:bread-baladi':'عيش بلدى رغيف بلدي خبز مصري',
+    'ref:balila':'بليله قمح',
+    'ref:peanut-butter':'زبدة الفول السوداني',
+    'ref:minced-beef':'لحمه مفرومه عصاج'
+  };
+
   const byId = new Map(CATALOG.map(x => [x.id, x]));
   let external = [];
   let query = '';
@@ -67,7 +125,7 @@
   const f = (value, digits = 0) => typeof value === 'number' && Number.isFinite(value)
     ? value.toLocaleString('ar-EG', { maximumFractionDigits: digits, minimumFractionDigits: digits }) : '—';
   const numberOrNull = x => x === null || x === undefined || x === '' || !Number.isFinite(Number(x)) ? null : Number(x);
-  const clean = s => String(s || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('en');
+  const clean = s => String(s || '').trim().toLocaleLowerCase('en').replace(/[ًٌٍَُِّْـ]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/ؤ/g,'و').replace(/ئ/g,'ي').replace(/\s+/g,' ');
   const latinDigits = s => String(s).replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
   const FOOD_FIELDS = ['calories','protein','carbs','fat','satfat'];
   function parseQuery(value) {
@@ -79,14 +137,41 @@
     }
     return { term: text, quantity: null };
   }
-  function localMatches(search) {
-    const q = clean(search);
-    if (!q) return CATALOG.slice(0, 12);
-    const terms = q.split(/\s+/).filter(Boolean);
-    return CATALOG.filter(item => {
-      const haystack = clean(item.name + ' ' + item.en);
-      return terms.every(term => haystack.includes(term));
-    }).slice(0, 16);
+  function customFoods(){
+    if(typeof state==='undefined'||!Array.isArray(state.rows))return [];
+    return state.rows.filter(x=>x.collection==='food-custom'&&x.data?.name)
+      .map(row=>({...row.data,id:'custom:'+row.id,source:'custom',
+        note:'قيم أدخلتها بنفسك من الملصق أو الوصفة. تأكد من الكمية ووحدة المرجع.'}));
+  }
+  function recentFoods(){
+    if(typeof state==='undefined'||!Array.isArray(state.rows))return [];
+    const rows=state.rows.filter(x=>x.collection==='food'&&x.data?.name).slice().sort((a,b)=>
+      String(b.updatedAt||b.date||'').localeCompare(String(a.updatedAt||a.date||'')));
+    const seen=new Set(),list=[];
+    for(const row of rows){
+      const d=row.data,id=String(d.foodId||d.name);
+      if(seen.has(id))continue;
+      seen.add(id);
+      list.push({id:'recent:'+row.id,originalId:d.foodId,name:d.name,en:'',kcal:d.calories,
+        protein:d.protein,carbs:d.carbs,fat:d.fat,satfat:d.satfat,
+        source:d.foodSource||'recent',brand:'',note:d.foodNote||'من سجل أكل سابق؛ راجع حالة التسوية والكمية.'});
+      if(list.length>=8)break;
+    }
+    return list;
+  }
+  function allFoods(){return [...customFoods(),...CATALOG]}
+  function localMatches(search){
+    const q=clean(search),foods=allFoods();
+    if(!q)return [...customFoods().slice(0,5),...CATALOG.slice(0,12)];
+    const terms=q.split(/\s+/).filter(Boolean);
+    const scored=foods.map(item=>{
+      const haystack=clean([item.name,item.en,SEARCH_ALIASES[item.id]||''].join(' '));
+      if(!terms.every(term=>haystack.includes(term)))return null;
+      const name=clean(item.name);
+      const score=(name===q?100:0)+(name.startsWith(q)?30:0)+(item.source==='custom'?15:0);
+      return {item,score};
+    }).filter(Boolean).sort((a,b)=>b.score-a.score);
+    return scored.slice(0,22).map(x=>x.item);
   }
   function mealInfo(id) { return MEALS.find(m => m.id === id) || MEALS[4]; }
   function mealOptions(chosen, includeUnsorted = false) {
