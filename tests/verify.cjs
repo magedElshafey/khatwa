@@ -118,7 +118,7 @@ const cfgTimer=vm.runInContext("state.settings.smoking.quitAt='2026-11-20T08:30'
 assert(cfgTimer.includes('data-quit-clock-days')&&cfgTimer.includes('data-quit-clock-hours')&&cfgTimer.includes('data-quit-clock-minutes'),'automatic day/hour/minute clock is missing');
 assert(!cfgTimer.includes('أيام بدون تدخين — مسجلة'),'manual day log must not remain the main counter');
 assert(cfgTimer.includes('تسجيل الأيام (اختياري)'),'daily log should be optional');
-assert(cfgTimer.includes('أسبابك للإقلاع')&&cfgTimer.includes('ساعدني أعدّي الرغبة'),'motivations and urge support missing');
+assert(cfgTimer.includes('quit-reasons-featured')&&cfgTimer.includes('ساعدني أعدّي الرغبة'),'motivations and urge support missing');
 assert(cfgTimer.includes('التسجيلات السابقة'),'slip records section missing');
 assert(cfgTimer.includes('quit-reasons-pin')&&cfgTimer.includes('quit-reasons-overview'),'new motivations layout must be rendered');
 assert(cfgTimer.includes('data-form="quit-reason-add"'),'per-reason input should be available');
