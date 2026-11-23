@@ -118,8 +118,13 @@ const cfgTimer=vm.runInContext("state.settings.smoking.quitAt='2026-11-20T08:30'
 assert(cfgTimer.includes('data-quit-clock-days')&&cfgTimer.includes('data-quit-clock-hours')&&cfgTimer.includes('data-quit-clock-minutes'),'automatic day/hour/minute clock is missing');
 assert(!cfgTimer.includes('أيام بدون تدخين — مسجلة'),'manual day log must not remain the main counter');
 assert(cfgTimer.includes('تسجيل الأيام (اختياري)'),'daily log should be optional');
-assert(cfgTimer.includes('أسبابك للإقلاع')&&cfgTimer.includes('ساعدني أعدّي الرغبة'),'motivations and urge support missing');
+assert(cfgTimer.includes('quit-reasons-featured')&&cfgTimer.includes('ساعدني أعدّي الرغبة'),'motivations and urge support missing');
 assert(cfgTimer.includes('التسجيلات السابقة'),'slip records section missing');
+assert(cfgTimer.includes('quit-reasons-pin')&&cfgTimer.includes('quit-reasons-overview'),'new motivations layout must be rendered');
+assert(cfgTimer.includes('data-form="quit-reason-add"'),'per-reason input should be available');
+assert(!cfgTimer.includes('quit-reasons-list'),'old motivation chips should no longer be used');
+assert(text('styles.css').includes('.quit-reasons-grid'),'responsive reason cards must ship with the CSS');
+assert(text('styles.css').includes('.quit-reason-edit-form'),'inline reason editor CSS is missing');
 assert(text('index.html').includes('src="./quit-support.js"'),'quitting support JS missing in entry');
 assert(text('sw.js').includes("'./quit-support.js'"),'quitting support must be cached offline');
 assert(text('scripts/build.cjs').includes("'quit-support.js'"),'quitting support script must ship in Vercel build');

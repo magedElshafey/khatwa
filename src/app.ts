@@ -188,7 +188,7 @@ async function restore(f:File){if(window.KhotwaCloud.isActive())throw Error('أ�
 async function wipe(){if(window.KhotwaCloud.isActive())throw Error('أوقف المزامنة قبل مسح السجلات المحلية. الحذف هنا لا يحذف بيانات السحابة.');if(!confirm('متأكد إنك عايز تمسح كل سجلاتك وصورك من الجهاز ده؟ العملية مش هتتراجع من غير Backup.'))return;await dbClear('records');await dbClear('meta');state.rows=[];state.settings={...defaults};render();notice('اتمسحت البيانات المحلية.','warning');}
 let smokeEditing=false;
 async function handleSubmit(e:SubmitEvent){let form=e.target;if(!(form instanceof HTMLFormElement)||!form.dataset.form)return;e.preventDefault();let kind=form.dataset.form;const get=(key:string)=>getFD(form,key),date=get('date')||state.date;const val=(key:string)=>safeNumber(get(key));try{
-if(kind==='quit-reasons'||kind==='quit-relapse'){await window.KhatwaQuit.submit(form);return;}
+if(['quit-reasons','quit-reason-add','quit-reason-edit','quit-relapse'].includes(kind)){await window.KhatwaQuit.submit(form);return;}
 if(kind==='cloud-login'||kind==='cloud-signup'){await window.KhotwaCloud.submit(form);return;}
 if(kind==='nutrition-add'||kind==='nutrition-edit'){await window.KhotwaNutrition.submit(form);return;}
 if(kind==='edit-record'){await window.KhotwaExperience.submitEdit(form);return;}
@@ -218,7 +218,7 @@ if(t.dataset.routine!==undefined){let key=state.settings.routine[Number(t.datase
 if(t.id==='import-file'&&t.files?.[0]){await restore(t.files[0]);t.value='';}
 }catch(err){notice('تعذر التحديث: '+(err instanceof Error?err.message:'خطأ'),'error');}}
 async function handleClick(e:MouseEvent){let el=(e.target as Element)?.closest<HTMLElement>('[data-nav],[data-action]');if(!el)return;let page=el.dataset.nav;if(page){go(page);return;}let a=el.dataset.action;try{
-if(a?.startsWith('quit-')){window.KhatwaQuit.action(a);return;}
+if(a?.startsWith('quit-')){await window.KhatwaQuit.action(a,el);return;}
 if(a?.startsWith('cloud-')){await window.KhotwaCloud.action(a);return;}
 if(a?.startsWith('nutrition-')){await window.KhotwaNutrition.action(a,el,e.target);return;}
 if(a==='toggle-theme'){changeTheme();return;}
