@@ -114,6 +114,7 @@
   let selected = null;
   let meal = 'breakfast';
   let editingId = null;
+  let barcodeBusy = false;
   let busy = false;
   let lastOnlineSearch = 0;
   let feedback = '';
@@ -235,6 +236,7 @@
     const source = row.data.foodSource;
     if (source === 'openfoodfacts') return '<span class="nutrition-source remote">Open Food Facts</span>';
     if (source === 'reference') return '<span class="nutrition-source">قيمة تقريبية</span>';
+    if (source === 'custom') return '<span class="nutrition-source custom">من أطعمتك</span>';
     return '<span class="nutrition-source legacy">سجل قديم</span>';
   }
   function renderMeal(r, info) {
@@ -243,20 +245,57 @@
   }
   function foodCard(item) {
     const cal = numberOrNull(item.kcal), p = numberOrNull(item.protein);
-    const badge = item.source === 'reference' ? 'صنف عام · تقريبي' : 'منتج مسجل · بطاقة غذائية';
+    const badge = item.source === 'reference' ? 'صنف عام · تقريبي' : item.source === 'custom' ? 'أنت ضفته · بياناتك' : item.source === 'recent' ? 'من سجلاتك السابقة' : 'منتج · قاعدة بيانات مجتمعية';
     return `<button type="button" class="nutrition-result" data-action="nutrition-select" data-id="${escape(item.id)}"><span class="nutrition-result-title"><strong>${escape(item.name)}</strong><small>${escape(badge)}${item.brand ? ' · ' + escape(item.brand) : ''}</small></span><span class="nutrition-result-numbers">${f(cal)} <small>سعر / 100جم</small><small>${f(p,1)} جم بروتين</small></span></button>`;
   }
   function resultsHtml() {
     const local = localMatches(resultQuery);
     const common = local.map(foodCard).join('');
     const online = external.map(foodCard).join('');
-    const hint = resultQuery ? (local.length ? '' : '<p class="hint">مفيش مطابقة محلية. جرّب البحث في المنتجات الغذائية.</p>') : '<p class="hint">اختار صنف من الأكثر شيوعًا، أو اكتب اسم أكلك.</p>';
-    return `<div class="nutrition-result-heading"><strong>أطعمة شائعة</strong><span>${local.length} نتائج</span></div>${hint}<div class="nutrition-result-list">${common}</div>${external.length?`<div class="nutrition-result-heading"><strong>نتائج Open Food Facts</strong><span>${external.length} منتجات</span></div><div class="nutrition-result-list">${online}</div>`:''}`;
+    const hint = resultQuery ? (local.length ? '' : '<p class="hint">ملقيناش الصنف محليًا. جرّب بحث المنتجات أو الباركود، ولو مش موجود احفظه من بطاقة العبوة.</p>') : '<p class="hint">ابحث باسم الأكل أو اختار من الأطعمة الشائعة. تقدر تحفظ منتجاتك الخاصة كمان.</p>';
+    return `<div class="nutrition-result-heading"><strong>${resultQuery?'نتائج على جهازك':'أطعمة شائعة وأطعمتك'}</strong><span>${local.length} نتيجة</span></div>${hint}<div class="nutrition-result-list">${common}</div>${external.length?`<div class="nutrition-result-heading"><strong>منتجات Open Food Facts</strong><span>${external.length} منتج</span></div><div class="nutrition-result-list">${online}</div>`:''}`;
+  }
+  function recentHtml(){
+    const recent=recentFoods();
+    return recent.length?`<section class="nutrition-recent"><div class="nutrition-result-heading"><strong>سجلتهم قبل كده</strong><span>إضافة سريعة</span></div><div class="nutrition-recent-list">${recent.map(food=>`<button type="button" class="nutrition-recent-chip" data-action="nutrition-select" data-id="${escape(food.id)}">${escape(food.name)}</button>`).join('')}</div></section>`:'';
+  }
+  function barcodeHtml(){
+    return `<section class="nutrition-barcode-panel">
+     <div class="nutrition-result-heading"><strong>منتج من السوبر ماركت؟</strong><span>بالباركود</span></div>
+     <p class="hint">اكتب رقم الباركود الموجود على العبوة، أو جرّب تصويره لو المتصفح بيدعم قراءة الباركود من الصور.</p>
+     <form data-form="nutrition-barcode" class="nutrition-barcode-form">
+       <label class="nutrition-search-label" for="nutrition-barcode-code"><span>رقم الباركود</span><input id="nutrition-barcode-code" name="code" inputmode="numeric" pattern="[0-9٠-٩۰-۹ ]{8,18}" autocomplete="off" placeholder="مثال: 3017620422003" required></label>
+       <button class="btn" type="submit" ${barcodeBusy?'disabled':''}>${barcodeBusy?'بندور...':'ابحث بالرقم'}</button>
+     </form>
+     <label class="nutrition-photo-barcode-btn" for="nutrition-barcode-photo"><span aria-hidden="true">▧</span> صوّر الباركود</label>
+     <input type="file" id="nutrition-barcode-photo" accept="image/*" capture="environment" class="nutrition-file-input" aria-describedby="nutrition-barcode-tip">
+     <small id="nutrition-barcode-tip">قراءة الصورة بتتم على جهازك لو المتصفح بيدعمها. لو مش مدعومة، اكتب الرقم يدويًا. تصوير الطبق وحده مش بيحدد السعرات بدقة.</small>
+    </section>`;
+  }
+  function customHtml(){
+    const foods=customFoods();
+    return `<details class="nutrition-custom-panel"><summary><span>＋ أضف صنف مش موجود</span><small>من بطاقة المنتج أو معلومة موثوقة</small></summary>
+     <p class="hint">القيم اللي هتكتبها هتتحفظ في حسابك وتظهر في البحث بعد كده. اكتب الرقم المدوّن للـ100 جم، أو غيّر وزن الحصة المكتوب على العبوة.</p>
+     <form data-form="nutrition-custom" class="nutrition-custom-form">
+      <div class="field nutrition-custom-wide"><label for="nutrition-custom-name">اسم الصنف أو البراند</label><input id="nutrition-custom-name" name="name" type="text" maxlength="100" placeholder="مثال: زبادي سادة من الشركة ..." required></div>
+      <div class="nutrition-custom-grid">
+       <div class="field"><label for="nutrition-custom-basis">القيم لكل كام جرام؟</label><input id="nutrition-custom-basis" name="basis" type="number" min="1" max="10000" step="any" value="100" required></div>
+       <div class="field"><label for="nutrition-custom-prep">حالة الأكل</label><select id="nutrition-custom-prep" name="prep"><option value="packaged">منتج معبأ / بطاقة غذائية</option><option value="cooked">مطبوخ</option><option value="raw">نيّ</option><option value="unknown">مش محدد</option></select></div>
+       <div class="field"><label for="nutrition-custom-kcal">السعرات على الملصق</label><input id="nutrition-custom-kcal" name="kcal" type="number" min="0" max="10000" step="any" placeholder="مثال: 130" required></div>
+       <div class="field"><label for="nutrition-custom-protein">البروتين (جم) — اختياري</label><input id="nutrition-custom-protein" name="protein" type="number" min="0" max="1000" step="any" placeholder="—"></div>
+       <div class="field"><label for="nutrition-custom-carbs">الكارب (جم) — اختياري</label><input id="nutrition-custom-carbs" name="carbs" type="number" min="0" max="1000" step="any" placeholder="—"></div>
+       <div class="field"><label for="nutrition-custom-fat">الدهون (جم) — اختياري</label><input id="nutrition-custom-fat" name="fat" type="number" min="0" max="1000" step="any" placeholder="—"></div>
+       <div class="field"><label for="nutrition-custom-satfat">دهون مشبعة (جم) — اختياري</label><input id="nutrition-custom-satfat" name="satfat" type="number" min="0" max="1000" step="any" placeholder="—"></div>
+      </div>
+      <button class="btn primary" type="submit">احفظ الصنف واستخدمه</button>
+     </form>
+     ${foods.length?`<div class="nutrition-custom-saved"><strong>أطعمتك المحفوظة (${foods.length})</strong><div class="nutrition-recent-list">${foods.slice(0,20).map(food=>`<button type="button" class="nutrition-recent-chip" data-action="nutrition-select" data-id="${escape(food.id)}">${escape(food.name)}</button>`).join('')}</div></div>`:''}
+    </details>`;
   }
   function previewHtml(item, amount) {
     if (!item) return '';
     const v = calc(item,amount);
-    const marker = item.source === 'reference' ? '<span class="nutrition-source">تقريبي</span>' : '<span class="nutrition-source remote">Open Food Facts</span>';
+    const marker = item.source === 'reference' ? '<span class="nutrition-source">تقريبي</span>' : item.source === 'custom' ? '<span class="nutrition-source custom">بياناتك</span>' : '<span class="nutrition-source remote">منتج</span>';
     return `<div class="nutrition-preview-head"><strong>${escape(item.name)}</strong>${marker}</div><div class="nutrition-preview-grid"><div><strong>${f(v.calories)}</strong><small>سعر حراري</small></div><div><strong>${f(v.protein,1)}</strong><small>بروتين (جم)</small></div><div><strong>${f(v.carbs,1)}</strong><small>كارب (جم)</small></div><div><strong>${f(v.fat,1)}</strong><small>دهون (جم)</small></div></div><p class="hint">مشبع: ${f(v.satfat,1)} جم · غير مشبع (حساب تقريبي): ${f(v.unsat,1)} جم. ${escape(item.note || 'النتيجة تعتمد على بطاقة المنتج؛ راجع الملصق الغذائي.')}</p>`;
   }
   function view() {
@@ -276,7 +315,7 @@
       <div class="nutrition-topline"><div><div class="eyebrow">FOOD JOURNAL / التغذية</div><h2>يومك الغذائي، بصورة أوضح</h2><p>اختار الأكل والكمية، والحساب يتم تلقائيًا. التاريخ الحالي: <strong>${escape(state.date)}</strong>.</p></div><span class="nutrition-live-label">محفوظ على جهازك</span></div>
       <section class="nutrition-totals" aria-label="حصيلة اليوم الغذائية"><div class="nutrition-total primary"><span>السعرات المسجلة</span><strong>${formatTotal(summary,'calories')}</strong><small>سعر حراري</small></div><div class="nutrition-total"><span>البروتين</span><strong>${formatTotal(summary,'protein',1)}</strong><small>جرام</small></div><div class="nutrition-total"><span>الكاربوهيدرات</span><strong>${formatTotal(summary,'carbs',1)}</strong><small>جرام</small></div><div class="nutrition-total"><span>الدهون الكلية</span><strong>${formatTotal(summary,'fat',1)}</strong><small>جرام</small></div></section>
       <section class="nutrition-distribution"><div class="nutrition-distribution-head"><div><strong>توزيع الماكروز المسجلة</strong><p>معلومة عن سجلاتك، مش هدف أو حد يومي.</p></div><div class="nutrition-fat-detail">دهون مشبعة: ${formatTotal(summary,'satfat',1)} جم · غير مشبعة تقديريًا: ${formatTotal(summary,'unsat',1)} جم</div></div><div class="nutrition-macro-track" role="img" aria-label="البروتين والكارب والدهون كنسبة من الطاقة المحسوبة للماكروز"><span class="protein" style="width:${p}%"></span><span class="carbs" style="width:${c}%"></span><span class="fat" style="width:${t}%"></span></div><div class="nutrition-macro-legend"><span><i class="protein"></i> بروتين</span><span><i class="carbs"></i> كارب</span><span><i class="fat"></i> دهون</span></div>${incomplete?'<p class="nutrition-note">* فيه سجلات ناقصة بيانات غذائية؛ الإجمالي الظاهر جزئي ومش معناه إن القيمة الناقصة صفر.</p>':''}</section>
-      <section class="nutrition-add-panel" aria-labelledby="nutrition-add-heading"><div class="nutrition-section-head"><div><h3 id="nutrition-add-heading">أضف صنفًا في ثواني</h3><p>ابحث بالعربي أو الإنجليزي؛ مثال: «100جم جبنة قريش كامل الدسم».</p></div></div><div class="nutrition-search-row"><label class="nutrition-search-label" for="nutrition-food-search"><span>اسم الأكل</span><input type="search" id="nutrition-food-search" value="${escape(query)}" autocomplete="off" placeholder="جبنة قريش، بطاطس، أرز..." /></label><button type="button" class="btn" data-action="nutrition-search-online" ${busy?'disabled':''}>${busy?'جارٍ البحث...':'بحث منتجات أونلاين'}</button></div><p class="nutrition-source-hint">القائمة الشائعة تعمل Offline. زر البحث يرسل <strong>اسم الصنف فقط</strong> إلى Open Food Facts؛ لا تُرسل سجلاتك الشخصية.</p><div class="nutrition-search-feedback" role="status" aria-live="polite">${escape(feedback)}</div><div id="nutrition-food-results">${resultsHtml()}</div>
+      <section class="nutrition-add-panel" aria-labelledby="nutrition-add-heading"><div class="nutrition-section-head"><div><h3 id="nutrition-add-heading">أضف صنفًا في ثواني</h3><p>ابحث بالعربي أو الإنجليزي؛ مثال: «100جم جبنة قريش كامل الدسم».</p></div></div><div class="nutrition-search-row"><label class="nutrition-search-label" for="nutrition-food-search"><span>اسم الأكل</span><input type="search" id="nutrition-food-search" value="${escape(query)}" autocomplete="off" placeholder="جبنة قريش، بطاطس، أرز..." /></label><button type="button" class="btn" data-action="nutrition-search-online" ${busy?'disabled':''}>${busy?'جارٍ البحث...':'بحث منتجات أونلاين'}</button></div><p class="nutrition-source-hint">القائمة الشائعة تعمل Offline. زر البحث يرسل <strong>اسم الصنف فقط</strong> إلى Open Food Facts؛ لا تُرسل سجلاتك الشخصية.</p><div class="nutrition-search-feedback" role="status" aria-live="polite">${escape(feedback)}</div><div id="nutrition-food-results">${resultsHtml()}</div>${recentHtml()}${barcodeHtml()}${customHtml()}
       ${selected?`<form data-form="nutrition-add" class="nutrition-entry-form"><div class="nutrition-fields"><div class="field"><label for="nutrition-grams">الكمية بالجرام</label><input type="number" min="1" max="10000" step="any" id="nutrition-grams" name="grams" required value="${escape(grams)}"></div><div class="field"><label for="nutrition-meal">الوجبة</label><select id="nutrition-meal" name="meal">${mealOptions(meal)}</select></div></div><div id="nutrition-preview">${previewHtml(selected,grams)}</div><div class="nutrition-form-actions"><button class="btn primary" type="submit">أضف إلى اليوم</button><button class="btn" type="button" data-action="nutrition-clear">تغيير الصنف</button></div></form>`:'<div class="nutrition-select-hint">اختار صنف من النتائج عشان تشوف قيمته حسب الكمية.</div>'}</section>
       <div class="nutrition-section-head nutrition-diary-title"><div><h3>الوجبات اللي سجلتها النهارده</h3><p>تقدر تعدّل الكمية والوجبة والتاريخ لأي صنف، من غير ما تعمل سجل مكرر.</p></div><strong>${todayRows.length} أصناف</strong></div><div class="nutrition-meals">${mealGroups}</div>
       <div class="nutrition-bottom-note">قيم الأصناف العامة تقريبية؛ وزن الطعام بعد التسوية أو قبلها يغيّر الحساب، والمنتجات المختلفة ممكن تختلف. <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener noreferrer">Open Food Facts</a> مصدر مجاني بترخيص <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener noreferrer">ODbL</a>. الحسابات للتوثيق والمعلومات فقط، مش لتحديد احتياج شخصي.</div>
@@ -318,7 +357,7 @@
     if (status) status.textContent = '';
   }
   function select(id) {
-    const product = byId.get(id) || external.find(x=>x.id === id);
+    const product = byId.get(id) || customFoods().find(x=>x.id === id) || recentFoods().find(x=>x.id===id) || external.find(x=>x.id === id);
     if(!product) { feedback='الصنف مش متاح حاليًا. جرّب تختاره مرة تانية.'; render(); return; }
     selected = product;
     render();
