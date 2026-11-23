@@ -96,3 +96,10 @@ The previous single `.alert` element was replaced with a tiny, dependency-free `
 - Users can save up to 12 personal motivations, which are displayed at the top of the smoking page and again in the craving support dialog. These settings sync across devices through the existing account settings record.
 - The optional craving support dialog suggests small, nonjudgmental coping strategies and makes clear cravings are not lapses. Only a user-confirmed event (cigarette actually smoked) is logged as `smoking-relapse` and restarts the clock at the confirmed new quit timestamp. The previous quit timestamp and relapse count are preserved in the record history; nothing is recorded when the user just feels an urge.
 - Relapse events and account settings are stored in IndexedDB and sync via the existing Supabase event log, with no new credentials, APIs or backend migration.
+
+### Motivations UI (v2)
+- Previously saved reasons in \`settings.quitReasons\` remain untouched; there is **no data migration**.
+- The first reason is a compact, sticky, two-line reminder at the top of the smoking module (avoids scrolling a tall nested list on mobile).
+- Additional reasons appear as a responsive card collection. A one-line composer adds one reason at a time, with duplicate and length validation.
+- "إدارة الأسباب" lets users edit each reason inline, reorder with accessible up/down buttons (the first reason becomes the featured reminder) and delete with a visible two-step confirmation. All individual edits sync through the existing settings service.
+- The urge support dialog continues to show **all** reasons, not just the featured reason.
