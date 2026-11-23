@@ -125,7 +125,9 @@ const recordedSteps=vm.runInContext("state.rows.push({id:'steps-2026-11-22',coll
 assert(recordedSteps.includes('value="6400"'),'existing steps need to be editable');
 assert(recordedSteps.includes('متبقي'),'step target progress missing');
 assert(vm.runInContext("viewToday()",ctx).includes('عادة ٨٬٠٠٠ خطوة'),'steps reminder missing from Today');
-const gateHTML=vm.runInContext("state.page='today';render();document.getElementById('app').innerHTML",ctx);
+let gateHTML='';
+ctx.document.getElementById=()=>({set innerHTML(value){gateHTML=value}});
+vm.runInContext("state.page='today';render()",ctx);
 assert(gateHTML.includes('auth-shell')&&!gateHTML.includes('class="side"'),'dashboard exposed before login');
 const sleepHtml=vm.runInContext("viewSleep()",ctx);
 assert(sleepHtml.includes('data-sleep="screen"'),'bedtime checklist not available');
