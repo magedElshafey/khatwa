@@ -487,3 +487,11 @@ html{scrollbar-gutter:stable}
 .nutrition-custom-saved strong{font-size:12px}
 .nutrition-source.custom{color:var(--violet)}
 @media(max-width:700px){.nutrition-barcode-panel{padding:12px}.nutrition-barcode-form{align-items:stretch}.nutrition-barcode-form .btn{width:100%}.nutrition-custom-panel{padding:0 11px}.nutrition-custom-grid{grid-template-columns:1fr}.nutrition-custom-panel>summary small{display:none}.nutrition-recent-list{gap:6px}}
+
+
+.nutrition-custom-rows{display:flex;flex-direction:column;gap:8px;margin:10px 0}
+.nutrition-custom-row{display:flex;align-items:center;flex-wrap:wrap;gap:7px;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.nutrition-custom-row .nutrition-recent-chip{flex:1;min-width:130px;justify-content:flex-start;background:var(--paper);border-color:transparent;border-radius:8px}
+.nutrition-custom-row .btn{padding:5px 10px;font-size:11px}
+.nutrition-custom-saved>small{display:block;color:var(--muted);font-size:10px;line-height:1.8;margin-bottom:12px}
+@media(max-width:480px){.nutrition-custom-row .nutrition-recent-chip{min-width:100%;justify-content:flex-start}.nutrition-custom-row .btn{min-height:35px}}
