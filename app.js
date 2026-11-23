@@ -232,7 +232,7 @@ async function handleSubmit(e) {
     const get = (key) => getFD(form, key), date = get('date') || state.date;
     const val = (key) => safeNumber(get(key));
     try {
-        if (kind === 'quit-reasons' || kind === 'quit-relapse') { await window.KhatwaQuit.submit(form); return; }
+        if (['quit-reasons','quit-reason-add','quit-reason-edit','quit-relapse'].includes(kind)) { await window.KhatwaQuit.submit(form); return; }
         if (kind === 'cloud-login' || kind === 'cloud-signup') { await window.KhotwaCloud.submit(form); return; }
         if (kind === 'nutrition-add' || kind === 'nutrition-edit') { await window.KhotwaNutrition.submit(form); return; }
         if (kind === 'edit-record') { await window.KhotwaExperience.submitEdit(form); return; }
@@ -381,7 +381,7 @@ async function handleClick(e) {
     }
     let a = el.dataset.action;
     try {
-        if(a?.startsWith('quit-')){window.KhatwaQuit.action(a);return;}
+        if(a?.startsWith('quit-')){await window.KhatwaQuit.action(a,el);return;}
         if(a?.startsWith('cloud-')){await window.KhotwaCloud.action(a);return;}
         if(a?.startsWith('nutrition-')){await window.KhotwaNutrition.action(a,el,e.target);return;}
         if(a==='toggle-theme'){changeTheme();return;}
