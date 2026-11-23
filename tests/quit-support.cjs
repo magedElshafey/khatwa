@@ -66,6 +66,7 @@ const quit=window.KhatwaQuit;
 
  assert(quit.reasonsCard().includes('quit-reasons-featured'),'primary motivation must be prominent');
  assert(quit.reasonsCard().includes('quit-reasons-grid'),'additional motivations must have dedicated readable cards');
+ assert(quit.reasonsCard().includes('quit-reason-tile is-primary'),'featured reason must also be shown in full in the card list');
  assert(quit.reasonsCard().includes('data-form="quit-reason-add"'),'adding motivations should be a one-reason form, not a bulk textarea');
  const newReason={dataset:{form:'quit-reason-add'},data:{reason:'عائلتي'}};
  assert.equal(await quit.submit(newReason),true,'new reason should be saved immediately');
