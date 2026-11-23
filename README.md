@@ -77,3 +77,11 @@ The records use stable IDs and updatedAt fields so a later authenticated backend
 - Personal photos remain local only and are removed from cloud event payloads. No public storage bucket.
 - Turn off syncing before restoring or clearing local records. Back up first. Auth refresh tokens stay on the device; use trusted browsers.
 - Supabase Free may pause after inactivity; local data remains available.
+
+## Account-first sign-in and step habit
+
+- `/` opens the Khatwa login screen unless a valid saved Supabase session exists. Refresh tokens persist sign-in across browser restarts. A user can sign out manually.
+- The browser caches each signed-in account's records in its own IndexedDB database (`khotwa_account_<uuid>`). Legacy anonymous records stay in the original database. On first connection, importing legacy data is an explicit choice, and declining the import does not delete that legacy database.
+- On a fresh device with no anonymous records, authentication automatically starts cloud synchronization and restores the account's records. On subsequent visits, the saved session restores access; local cached records work offline after prior login. Records saved offline are queued for later upload.
+- The habits page includes a manual `8,000 steps` daily tracker with progress and editing for a selected date. It does not access Apple Health or claim automatic step counting.
+- Email signup still requires correct Supabase Auth Site URL and Redirect URLs configured for the deployed hostname. Email verification can be completed before signing in with the form.

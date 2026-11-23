@@ -50,7 +50,7 @@ const empty = (title, desc) => `<div class="empty"><div class="empty-icon">◌</
 const action = (label, verb, other = '', cls = 'btn') => `<button type="button" class="${cls}" data-action="${verb}" ${other}>${label}</button>`;
 const chip = (str, style = '') => `<span class="pill ${style}">${E(str)}</span>`;
 const rules = `<div class="notice amber">كل الأرقام مبنية على اللي إنت سجلته فعلًا. اليوم اللي متسجلش مش هيتحسب إنجاز ولا فشل. مفيش حاجة بتتبعت تلقائيًا.</div>`;
-function openDB() { return new Promise((resolve, reject) => { const r = indexedDB.open('khotwa_life_os', 1); r.onupgradeneeded = () => { let db = r.result; if (!db.objectStoreNames.contains('records')) {
+function openDB(name='khotwa_life_os') { return new Promise((resolve, reject) => { const r = indexedDB.open(name, 1); r.onupgradeneeded = () => { let db = r.result; if (!db.objectStoreNames.contains('records')) {
     let store = db.createObjectStore('records', { keyPath: 'id' });
     store.createIndex('collection', 'collection', { unique: false });
     store.createIndex('date', 'date', { unique: false });
@@ -64,9 +64,21 @@ function dbClear(store) { return new Promise((resolve, reject) => { if (!state.d
     return reject(Error('no db')); const tx = state.db.transaction(store, 'readwrite'); tx.objectStore(store).clear(); tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); }); }
 function dbDelete(store, id) { return new Promise((resolve, reject) => { if (!state.db)
     return reject(Error('no db')); const tx = state.db.transaction(store, 'readwrite'); tx.objectStore(store).delete(id); tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); }); }
-async function save(collection, date, data, id) { let item = { id: id || `${collection}-${uid()}`, collection, date, data, updatedAt: new Date().toISOString() }; await dbPut('records', item); state.rows = state.rows.filter(x => x.id !== item.id).concat(item); }
-async function erase(id) { await dbDelete('records', id); state.rows = state.rows.filter(x => x.id !== id); }
-async function saveSettings(newSettings) { state.settings = newSettings; await dbPut('meta', { id: 'settings', data: newSettings, updatedAt: new Date().toISOString() }); }
+async function save(collection, date, data, id) { let item = { id: id || `${collection}-${uid()}`, collection, date, data, updatedAt: new Date().toISOString() }; await dbPut('records', item); state.rows = state.rows.filter(x => x.id !== item.id).concat(item); await window.KhotwaCloud.enqueue('record','upsert',item.id,item); }
+async function erase(id) { await dbDelete('records', id); state.rows = state.rows.filter(x => x.id !== id); await window.KhotwaCloud.enqueue('record','delete',id,{}); }
+async function saveSettings(newSettings) { state.settings = newSettings; await dbPut('meta', { id: 'settings', data: newSettings, updatedAt: new Date().toISOString() }); await window.KhotwaCloud.enqueue('settings','upsert','settings',{data:newSettings,updatedAt:new Date().toISOString()}); }
+async function switchAccountDatabase(userId){
+ if(!/^[a-f0-9-]{36}$/i.test(userId))throw Error('معرّف الحساب غير صالح');
+ state.db=await openDB('khotwa_account_'+userId);
+ state.rows=await dbGetAll('records');
+ const meta=await dbGetAll('meta');
+ const settings=meta.find(x=>x.id==='settings')?.data;
+ state.settings={...defaults,...(settings||{})};
+}
+async function exportLegacy(rows,settings){
+ await download(`khotwa-legacy-backup-${today()}.json`,JSON.stringify({format:'khotwa-life-os-backup',schemaVersion:1,exportedAt:new Date().toISOString(),settings,records:rows},null,2),'application/json');
+ notice('اتعملت نسخة احتياطية من بياناتك القديمة.');
+}
 function notice(text) { let old = document.querySelector('.alert'); old?.remove(); let el = document.createElement('div'); el.className = 'alert'; el.textContent = text; el.setAttribute('role', 'status'); document.body.append(el); setTimeout(() => el.remove(), 3800); }
 const getFD = (f, key) => String(new FormData(f).get(key) ?? '').trim();
 function allSessions() { return window.LIFE_OS_ROADMAP.phases.flatMap((p) => p.sprints.flatMap((s) => [['A', s.a], ['B', s.b], ['L', s.lab]].map(([k, v]) => ({ key: `${s.id}-${k}`, phase: p, sprint: s, kind: k, title: v.title || v.task || v.evidence || 'تطبيق', theory: v.theory || '', practice: v.practice || v.evidence || '', level: v.level || 'P0' })))); }
@@ -82,93 +94,20 @@ function changeTheme() {
 }
 function pageShell(body) { let info = pageInfo[state.page] || pageInfo.today; let themeButton = `<button type="button" class="theme-toggle" data-action="toggle-theme" aria-label="${isDarkTheme()?'شغل الوضع الفاتح':'شغل الوضع الداكن'}" title="${isDarkTheme()?'شغل الوضع الفاتح':'شغل الوضع الداكن'}"><span aria-hidden="true">${isDarkTheme()?'☀️':'🌙'}</span><span class="theme-toggle-label">${isDarkTheme()?'فاتح':'داكن'}</span></button>`;let head = `<div class="topbar"><div><div class="eyebrow">خطوة / Personal Life OS</div><h1>${E(info[0])}</h1><div class="date">${readable(state.date)}</div></div><div class="row topbar-actions">${themeButton}<label class="topdate"><span>اختار يوم</span><input id="global-date" aria-label="اختار اليوم اللي هتسجل فيه" type="date" value="${E(state.date)}"></label></div></div>`; let nav = sideGroups.map(([label, pages]) => `<div class="navlabel">${label}</div>${pages.map(p => `<button type="button" class="navitem ${state.page === p ? 'active' : ''}" data-nav="${p}"><span class="sym">${pageInfo[p][2]}</span>${pageInfo[p][0]}</button>`).join('')}`).join(''); let mobile = [['today', '⌂', 'النهارده'], ['learning', '⌘', 'التعلم'], ['workout', '♢', 'الصحة'], ['spiritual', '☼', 'العادات'], ['more', '☷', 'المزيد']].map(([p, s, t]) => `<button data-nav="${p}" class="${state.page === p || (p === 'more' && !['today', 'learning', 'workout', 'spiritual'].includes(state.page)) ? 'active' : ''}"><span>${s}</span>${t}</button>`).join(''); return `<div class="shell"><aside class="side"><div class="logo"><div class="logo-mark">✓</div><div><strong>خطوة</strong><small>Life OS · Offline-first</small></div></div>${nav}<div class="sidefoot">متخزن محليًا. اعمل نسخة احتياطية بانتظام.</div></aside><main class="content">${head}<div class="page-content">${body}</div><footer class="footer">خطوة · النسخة التجريبية 0.1 · مفيش حساب ومفيش مزامنة لسه · بياناتك على جهازك</footer></main><nav class="mobile-nav" aria-label="القائمة الرئيسية">${mobile}</nav></div>`; }
 let lastRenderedPage;
-function render() { let holder = document.getElementById('app'); if (!holder)
-    return; let v = ''; switch (state.page) {
-    case 'today':
-        v = viewToday();
-        break;
-    case 'learning':
-        v = viewLearning();
-        break;
-    case 'english':
-        v = viewEnglish();
-        break;
-    case 'business':
-        v = viewBusiness();
-        break;
-    case 'smoking':
-        v = viewSmoking();
-        break;
-    case 'workout':
-        v = viewWorkout();
-        break;
-    case 'nutrition':
-        v = viewNutrition();
-        break;
-    case 'body':
-        v = viewBody();
-        break;
-    case 'spiritual':
-        v = viewSpiritual();
-        break;
-    case 'routine':
-        v = viewRoutine();
-        break;
-    case 'sleep':
-        v = viewSleep();
-        break;
-    case 'money':
-        v = viewMoney();
-        break;
-    case 'social':
-        v = viewSocial();
-        break;
-    case 'review':
-        v = viewReview();
-        break;
-    case 'settings':
-        v = viewSettings();
-        break;
-    default: v = viewMore();
-} const accordionState = new Map();
-    if (lastRenderedPage === state.page) {
-        holder.querySelectorAll('details[data-accordion-id]').forEach(el => {
-            const id = el.dataset.accordionId;
-            if (id)
-                accordionState.set(id, el.open);
-        });
-    }
-    holder.innerHTML = pageShell(v) + window.KhotwaExperience.editor();
-    if (accordionState.size) {
-        holder.querySelectorAll('details[data-accordion-id]').forEach(el => {
-            const id = el.dataset.accordionId;
-            if (id && accordionState.has(id))
-                el.open = accordionState.get(id);
-        });
-    }
-    if (lastRenderedPage !== state.page) {
-        holder.querySelector?.('.page-content')?.classList.add('page-enter');
-    }
-    lastRenderedPage = state.page; }
+function render(){let holder=document.getElementById('app');if(!holder)return; if(!window.KhotwaCloud.isReady()){holder.innerHTML=window.KhotwaCloud.loadingView();return;}if(!window.KhotwaCloud.isAuthenticated()){holder.innerHTML=window.KhotwaCloud.loginView();return;}if(!window.KhotwaCloud.isPrepared()){holder.innerHTML=window.KhotwaCloud.migrationView();return;}let v='';switch(state.page){case'today':v=viewToday();break;case'learning':v=viewLearning();break;case'english':v=viewEnglish();break;case'business':v=viewBusiness();break;case'smoking':v=viewSmoking();break;case'workout':v=viewWorkout();break;case'nutrition':v=viewNutrition();break;case'body':v=viewBody();break;case'spiritual':v=viewSpiritual();break;case'routine':v=viewRoutine();break;case'sleep':v=viewSleep();break;case'money':v=viewMoney();break;case'social':v=viewSocial();break;case'review':v=viewReview();break;case'settings':v=viewSettings();break;default:v=viewMore();}const accordionState=new Map();
+if(lastRenderedPage===state.page){holder.querySelectorAll('details[data-accordion-id]').forEach(el=>{const id=el.dataset.accordionId;if(id)accordionState.set(id,el.open);});}
+holder.innerHTML=pageShell(v)+window.KhotwaExperience.editor();
+if(accordionState.size){holder.querySelectorAll('details[data-accordion-id]').forEach(el=>{const id=el.dataset.accordionId;if(id&&accordionState.has(id))el.open=accordionState.get(id);});}
+if(lastRenderedPage!==state.page){holder.querySelector?.('.page-content')?.classList.add('page-enter');}
+lastRenderedPage=state.page;}
 function go(p) { if (p !== 'smoking')
     smokeEditing = false; state.page = p; render(); window.scrollTo({ top: 0, behavior: 'instant' }); }
 function viewMore() { return `<div class="pageintro"><p>كل الموديولات قدامك. اختار القسم اللي محتاج تسجل فيه حاجة.</p></div><div class="moremenu">${sideGroups.flatMap(g => g[1]).map(p => `<button class="navitem" data-nav="${p}"><span class="sym">${pageInfo[p][2]}</span>${pageInfo[p][0]}</button>`).join('')}</div>`; }
-function viewToday() {
-    let eng = row('english-' + state.date), sm = row('smoke-' + state.date), hab = row('spirit-' + state.date);
-    let noteCount = group('learning').length;
-    let s = nextSession();
-    let yesSmoke = sm?.data?.count === 0;
-    let hCount = hab ? prayerItems.filter(([key])=>Boolean(hab.data[key])).length : 0;
-    let steps = [{ p: 'learning', title: 'الجلسة الجاية', subtitle: s?.title || 'كل الجلسات اتسجلت! (راجع معايير الانتقال)', icon: '⌘', label: s ? 'افتح الجلسة' : 'راجع التقدم' }, { p: 'english', title: '10 دقايق إنجليزي', subtitle: eng ? 'سجلت ممارستك النهارده' : 'اسمع أو اتكلم أو اكتب 10 دقايق', icon: 'Aa', label: eng ? 'شوف التسجيل' : 'ابدأ' }, { p: 'smoking', title: 'متابعة الإقلاع', subtitle: sm ? (yesSmoke ? 'سجلت يوم من غير تدخين' : `سجلت ${F(n(sm.data.count))} سيجارة`) : 'لسه مسجلتش النهارده', icon: '♧', label: 'افتح' }, { p: 'spiritual', title: 'عاداتك الروحية', subtitle: hab ? `سجلت ${hCount} من ${prayerItems.length} بنود` : 'سجل اللي حصل النهارده', icon: '☼', label: 'افتح' }];
-    let cards = steps.map(x => `<div class="card soft"><div class="priority"><span class="circle">${x.icon}</span><div style="flex:1"><h3>${x.title}</h3><p>${E(x.subtitle)}</p>${action(x.label, 'nav', `data-page="${x.p}"`, 'btn sm')}</div></div></div>`).join('');
-    let learnPct = pct(completedSessions(), allSessions().length);
-    let smokeZero = group('smoking').filter(x => x.data?.count === 0 && (!state.settings.smoking || x.date >= state.settings.smoking.start)).length;
-    return `<div class="hero"><div><div class="eyebrow">مش مطلوب الكمال، المهم الخطوة اللي جاية</div><h2>${state.settings.displayName ? 'أهلًا، ' + E(state.settings.displayName) : 'أهلًا بيك في مساحتك'}</h2><p>اختار حاجة واحدة تبدأ بيها، وسجل اللي حصل فعلًا. كل يوم جديد مش امتحان.</p><div class="row" style="margin-top:13px">${action('افتح جلسة التعلم', 'nav', 'data-page="learning"', 'btn primary')}${action('مراجعة الأسبوع', 'nav', 'data-page="review"', 'btn')}</div></div><div class="hero-deco">✳</div></div>
-<div class="grid g4"><div class="card"><div class="statlabel">التعلم المكتمل</div><div class="statnum statcolor">${F(completedSessions())}</div><div class="statmeta">من ${F(allSessions().length)} جزء في المسار</div>${bar(completedSessions(), allSessions().length)}</div><div class="card"><div class="statlabel">أيام إنجليزي مسجلة</div><div class="statnum">${F(counts('english'))}</div><div class="statmeta">كل ممارسة لها قيمتها</div></div><div class="card"><div class="statlabel">أيام بدون تدخين مسجلة</div><div class="statnum">${F(smokeZero)}</div><div class="statmeta">من الأيام اللي انت سجلتها</div></div><div class="card"><div class="statlabel">سجلات تمرين</div><div class="statnum">${F(counts('workout'))}</div><div class="statmeta">كل مجموعة مسجلة</div></div></div>
+function viewToday(){let eng=row('english-'+state.date),sm=row('smoke-'+state.date),hab=row('spirit-'+state.date);let noteCount=group('learning').length;let s=nextSession();let yesSmoke=sm?.data?.count===0;let hCount=hab?prayerItems.filter(([key])=>Boolean(hab.data[key])).length:0;let todaySteps=row('steps-'+state.date)?.data?.count;let steps=[{p:'learning',title:'الجلسة الجاية',subtitle:s?.title||'كل الجلسات اتسجلت! (راجع معايير الانتقال)',icon:'⌘',label:s?'افتح الجلسة':'راجع التقدم'}, {p:'english',title:'10 دقايق إنجليزي',subtitle:eng?'سجلت ممارستك النهارده':'اسمع أو اتكلم أو اكتب 10 دقايق',icon:'Aa',label:eng?'شوف التسجيل':'ابدأ'}, {p:'smoking',title:'متابعة الإقلاع',subtitle:sm?(yesSmoke?'سجلت يوم من غير تدخين':`سجلت ${F(n(sm.data.count))} سيجارة`):'لسه مسجلتش النهارده',icon:'♧',label:'افتح'}, {p:'spiritual',title:'عاداتك الروحية',subtitle:hab?`سجلت ${hCount} من ${prayerItems.length} بنود`:'سجل اللي حصل النهارده',icon:'☼',label:'افتح'}, {p:'spiritual',title:'عادة ٨٬٠٠٠ خطوة',subtitle:todaySteps===undefined?'سجّل عدد خطواتك الحقيقي النهارده':`${F(n(todaySteps))} خطوة من هدف ٨٬٠٠٠`,icon:'♧',label:'سجّل خطواتك'}];let cards=steps.map(x=>`<div class="card soft"><div class="priority"><span class="circle">${x.icon}</span><div style="flex:1"><h3>${x.title}</h3><p>${E(x.subtitle)}</p>${action(x.label,'nav',`data-page="${x.p}"`,'btn sm')}</div></div></div>`).join('');let learnPct=pct(completedSessions(),allSessions().length);let smokeZero=group('smoking').filter(x=>x.data?.count===0&&(!state.settings.smoking||x.date>=state.settings.smoking.start)).length;return `<div class="hero"><div><div class="eyebrow">مش مطلوب الكمال، المهم الخطوة اللي جاية</div><h2>${state.settings.displayName?'أهلًا، '+E(state.settings.displayName):'أهلًا بيك في مساحتك'}</h2><p>اختار حاجة واحدة تبدأ بيها، وسجل اللي حصل فعلًا. كل يوم جديد مش امتحان.</p><div class="row" style="margin-top:13px">${action('افتح جلسة التعلم','nav','data-page="learning"','btn primary')}${action('مراجعة الأسبوع','nav','data-page="review"','btn')}</div></div><div class="hero-deco">✳</div></div>
+<div class="grid g4"><div class="card"><div class="statlabel">التعلم المكتمل</div><div class="statnum statcolor">${F(completedSessions())}</div><div class="statmeta">من ${F(allSessions().length)} جزء في المسار</div>${bar(completedSessions(),allSessions().length)}</div><div class="card"><div class="statlabel">أيام إنجليزي مسجلة</div><div class="statnum">${F(counts('english'))}</div><div class="statmeta">كل ممارسة لها قيمتها</div></div><div class="card"><div class="statlabel">أيام بدون تدخين مسجلة</div><div class="statnum">${F(smokeZero)}</div><div class="statmeta">من الأيام اللي انت سجلتها</div></div><div class="card"><div class="statlabel">سجلات تمرين</div><div class="statnum">${F(counts('workout'))}</div><div class="statmeta">كل مجموعة مسجلة</div></div></div>
 <div class="sectiontitle"><h2>نركّز على إيه النهارده؟</h2><span class="pill green">اختيارات صغيرة</span></div><div class="grid g2">${cards}</div>
-<div class="sectiontitle"><h2>أولوياتك الحالية</h2>${action('تعديل الأهداف', 'nav', 'data-page="settings"', 'btn sm')}</div><div class="grid g3">${state.settings.goals.map((g, i) => `<div class="card soft"><div class="eyebrow">الهدف ${i + 1}</div><h3>${E(g)}</h3></div>`).join('')}</div>
-<div class="sectiontitle"><h2>إيه المهم وإيه ممكن يستنى؟</h2></div><div class="grid g2 today-priority-grid"><div class="card"><div class="cardhead"><h3>Must-have دلوقتي</h3>${chip('أولوية', 'green')}</div><p>JS/TS بفهم مستقل، Problem Solving، أساسيات Web وGit، English بشكل منتظم، أول خطوات حقيقية في Plan B.</p></div><div class="card"><div class="cardhead"><h3>Nice-to-have بعدين</h3>${chip('مؤجّل', 'amber')}</div><p>Flutter، Laravel، Microservices، Kubernetes، Fine-tuning، وتجميع أدوات AI من غير حاجة واضحة ليها.</p></div></div>${rules}`;
-}
+<div class="sectiontitle"><h2>أولوياتك الحالية</h2>${action('تعديل الأهداف','nav','data-page="settings"','btn sm')}</div><div class="grid g3">${state.settings.goals.map((g,i)=>`<div class="card soft"><div class="eyebrow">الهدف ${i+1}</div><h3>${E(g)}</h3></div>`).join('')}</div>
+<div class="sectiontitle"><h2>إيه المهم وإيه ممكن يستنى؟</h2></div><div class="grid g2 today-priority-grid"><div class="card"><div class="cardhead"><h3>Must-have دلوقتي</h3>${chip('أولوية','green')}</div><p>JS/TS بفهم مستقل، Problem Solving، أساسيات Web وGit، English بشكل منتظم، أول خطوات حقيقية في Plan B.</p></div><div class="card"><div class="cardhead"><h3>Nice-to-have بعدين</h3>${chip('مؤجّل','amber')}</div><p>Flutter، Laravel، Microservices، Kubernetes، Fine-tuning، وتجميع أدوات AI من غير حاجة واضحة ليها.</p></div></div>${rules}`;}
 function viewLearning() {
     let roadmap = window.LIFE_OS_ROADMAP;
     let phases = roadmap.phases;
@@ -227,8 +166,19 @@ function nutritionTotals(list) { return list.reduce((a, x) => { let d = x.data, 
 function viewNutrition() { return window.KhotwaNutrition.view(); }
 function viewBody() { let list = group('body'); return `<div class="notice">القياسات والصور للمتابعة الشخصية فقط، ومش مقياس لقيمتك أو نجاحك. سجّلها لو مفيدة ليك، ومفيش تقييم لشكل الجسم.</div><div class="sectiontitle"><h2>قياس جديد (اختياري)</h2></div>${panel('مقاساتك', 'كل الأرقام بالسنتيمتر، والوزن بالكيلوجرام. تقدر تسيب أي خانة فاضية.', `<form data-form="body"><div class="formgrid">${datefield()}${numfield('الوزن (كجم)', 'weight', { min: 0 })}${numfield('محيط الصدر (سم)', 'chest', { min: 0 })}${numfield('محيط الرقبة (سم)', 'neck', { min: 0 })}${numfield('محيط البطن (سم)', 'abdomen', { min: 0 })}${numfield('محيط الذراع (سم)', 'arm', { min: 0 })}${numfield('محيط الفخذ (سم)', 'thigh', { min: 0 })}<div class="field"><label>صورة خاصة (اختياري)</label><input type="file" name="photo" accept="image/*"><small>تُضغط وتتحفظ على نفس جهازك. تظهر في النسخة الاحتياطية.</small></div></div><div class="formactions"><button class="btn primary" type="submit">احفظ القياس</button></div></form>`)}<div class="sectiontitle"><h2>التاريخ المسجل</h2></div>${list.length ? `<div class="card"><div class="tablewrap"><table><thead><tr><th>تاريخ</th><th>وزن</th><th>صدر</th><th>رقبة</th><th>بطن</th><th>ذراع</th><th>فخذ</th><th></th></tr></thead><tbody>${list.map(x => `<tr><td>${E(x.date)}</td>${['weight', 'chest', 'neck', 'abdomen', 'arm', 'thigh'].map(k => `<td>${x.data[k] ? F(n(x.data[k]), 1) : '—'}</td>`).join('')}<td>${action('تعديل', 'edit-record', `data-id="${E(x.id)}"`, 'btn sm')}${action('حذف', 'delete', `data-id="${E(x.id)}"`, 'btn sm warn')}</td></tr>`).join('')}</tbody></table></div></div><div class="sectiontitle"><h2>الصور الخاصة</h2></div><div class="photos">${list.filter(x => x.data.photo).map(x => `<div class="photo-card"><img loading="lazy" class="photo" src="${E(x.data.photo)}" alt="صورة خاصة بتاريخ ${E(x.date)}"><small>${E(x.date)}</small></div>`).join('')}</div>` : empty('لسه مفيش قياسات', 'أول قياس تحفظه هيظهر هنا')}`; }
 const prayerItems=[['fajr','الفجر'],['dhuhr','الظهر'],['asr','العصر'],['maghrib','المغرب'],['isha','العشاء'],['adhkarMorning','أذكار الصباح'],['adhkarEvening','أذكار المساء'],['sadaqa','الصدقة'],['quran','ورد القرآن']];
-function viewSpiritual(){let d=row('spirit-'+state.date)?.data||{};let done=prayerItems.filter(x=>!!d[x[0]]).length;return `<div class="pageintro"><p>مساحة هادية لتسجيل عاداتك الروحية. ما فيش مقارنة بينك وبين أي حد، ومفيش رسائل تأنيب لو يوم فات.</p></div><div class="grid g2"><div class="card"><div class="statlabel">المسجل في اليوم المحدد</div><div class="statnum statcolor">${done} / ${prayerItems.length}</div>${bar(done,prayerItems.length)}</div><div class="card"><div class="statlabel">أيام فيها تسجيل</div><div class="statnum">${counts('spiritual')}</div><small>ده عدد الأيام اللي أنت حفظت فيها سجلات فقط.</small></div></div><div class="sectiontitle"><h2>تابع اليوم</h2></div><div class="card"><div class="notice" style="margin-bottom:12px">كل اختيار بيتحفظ لما تضغط عليه، وبإمكانك تشيله تاني. التاريخ الحالي: ${readable(state.date)}</div>${d.adhkar!==undefined?`<div class="notice amber" style="margin-bottom:12px">عندك تسجيل أذكار قديم غير مقسّم${d.adhkar?" (كان متعلّم عليه)":""}. احتفظنا بيه كما هو، ومش هنحسبه تلقائيًا صباح ومساء.</div>`:""}${prayerItems.map(([k,label])=>`<label class="checkrow"><input type="checkbox" data-spirit="${k}" ${d[k]?'checked':''}><span>${label}</span></label>`).join('')}</div>`;}
-
+function viewSpiritual(){
+ const d=row('spirit-'+state.date)?.data||{},done=prayerItems.filter(([key])=>Boolean(d[key])).length;
+ const stepsRecord=row('steps-'+state.date),recorded=stepsRecord?Math.max(0,n(stepsRecord.data.count)):null;
+ return `<div class="pageintro"><p>مساحة هادية لتسجيل عاداتك الروحية واليومية. ما فيش مقارنة أو تأنيب لو يوم فات.</p></div>
+ <div class="grid g2"><div class="card"><div class="statlabel">العادات الروحية المسجلة في اليوم المحدد</div><div class="statnum statcolor">${done} / ${prayerItems.length}</div>${bar(done,prayerItems.length)}</div><div class="card"><div class="statlabel">أيام فيها تسجيل روحي</div><div class="statnum">${counts('spiritual')}</div><small>الأيام اللي انت حفظت فيها سجلات فقط.</small></div></div>
+ <div class="sectiontitle"><h2>العادات الروحية</h2></div><div class="card"><div class="notice" style="margin-bottom:12px">كل اختيار بيتحفظ لما تضغط عليه. اليوم المحدد: ${readable(state.date)}</div>${d.adhkar!==undefined?`<div class="notice amber" style="margin-bottom:12px">عندك تسجيل أذكار قديم غير مقسّم. احتفظنا بيه كما هو ومش بنفترض إنه الصباح والمساء.</div>`:''}${prayerItems.map(([key,label])=>`<label class="checkrow"><input type="checkbox" data-spirit="${key}" ${d[key]?'checked':''}><span>${label}</span></label>`).join('')}</div>
+ <div class="sectiontitle"><h2>عادة الحركة اليومية</h2></div>
+<div class="card steps-habit-card">
+ <div class="row between"><div><h3>هدف اليوم: ٨٬٠٠٠ خطوة</h3><p class="muted">سجّل عدد خطواتك اللي اتحسب فعلًا من موبايلك أو ساعتك. مش مطلوب تكمل العدد مرة واحدة.</p></div><div class="steps-habit-number">${recorded===null?'—':F(recorded)} <small>خطوة</small></div></div>
+ ${recorded!==null?`<div class="steps-habit-progress">${bar(Math.min(recorded,8000),8000)}<p class="hint">${recorded>=8000?'وصلت للهدف اللي اخترته النهارده.':`متبقي ${F(8000-recorded)} خطوة للوصول للهدف — ده هدف متابعة مرن، مش التزام إجباري.`}</p></div>`:'<p class="hint">لسه مفيش عدد خطوات مسجل لليوم ده.</p>'}
+ <form data-form="daily-steps" class="steps-form"><div class="formgrid"><div class="field"><label for="steps-count">عدد الخطوات الفعلي</label><input id="steps-count" type="number" min="0" max="100000" step="1" name="count" value="${recorded===null?'':recorded}" placeholder="مثال: 5700" required><small>مدخل يدوي — الموقع مش بيقرأ عدّاد خطوات iPhone تلقائيًا.</small></div></div><div class="formactions"><button type="submit" class="btn primary">${recorded===null?'احفظ خطوات اليوم':'حدّث العدد'}</button></div></form>
+</div>`;
+}
 function sleepSteps(){return state.settings.sleepRoutine||defaultSleepSteps;}
 function viewSleep(){
  const steps=sleepSteps(),data=row('sleep-'+state.date)?.data?.steps||{};
@@ -254,12 +204,9 @@ function viewReview() {
     return `<div class="pageintro"><p>دي فرصتك تبص على الأسبوع من غير ما تحكم على نفسك. كل حاجة بتسجلها اختيارية، ومفيش مشاركة تلقائية.</p></div><div class="grid g2"><div class="card"><div class="eyebrow">فترة المراجعة</div><h2>${E(w)} → ${E(weekEnd(w))}</h2><p class="muted">الأسبوع يبدأ الاثنين. لو محتاج تراجع أسبوع أقدم غيّر التاريخ من الإعدادات.</p></div><div class="card"><div class="statlabel">إجمالي السجلات خلال الأسبوع</div><div class="statnum statcolor">${F(weekRows(w).length)}</div><small>مش درجة ولا نسبة نجاح</small></div></div><div class="sectiontitle"><h2>اسأل نفسك 4 أسئلة</h2></div>${panel('مراجعتك الأسبوعية', 'الإجابات خاصة بيك وبتتحفظ على جهازك.', `<form data-form="review" data-week="${E(w)}"><div class="stack">${area('إيه اللي قدرت تنجزه؟', 'done', saved.done || '')}${area('إيه اللي وقفك أو اتعطّل؟', 'blockers', saved.blockers || '')}${area('إيه اللي محتاج إعادة ترتيب الأسبوع الجاي؟', 'next', saved.next || '')}${area('إيه أسئلتك المتراكمة للمينتور؟', 'questions', saved.questions || '')}</div><div class="formactions"><button type="submit" class="btn primary">احفظ مراجعة الأسبوع</button></div></form>`)}
 <div class="sectiontitle"><h2>ملخص جاهز للمشاركة — بإيدك فقط</h2></div><div class="card"><div id="mentor-report" class="summarybox">${E(makeReport(w))}</div><div class="formactions">${action('انسخ الملخص', 'copy-report', '', 'btn primary')}${action('تحميل TXT', 'download-report', '', 'btn')}</div><p class="hint">النسخ أو التحميل بيتم بس لما تضغط. مفيش إيميل أو رسالة بتتبعت تلقائيًا.</p></div>`;
 }
-function viewSettings() {
-    let d = state.settings;
-    let stat = state.rows.length;
-    return `<div class="pageintro"><p>هنا تقدر تعدل أهدافك وتوزيع وقتك، وتعمل نسخة احتياطية. البيانات محلية في المتصفح ده بس لحد ما نضيف Sync في نسخة B.</p></div><div class="grid g2">${panel('أهدافك وأولوياتك', 'غيّرهم براحتك من الموبايل أو الكمبيوتر.', `<form data-form="settings"><div class="formgrid">${txtfield('اسم اختياري للترحيب', 'displayName', d.displayName || '')}${numfield('دقائق Engineering أسبوعيًا', 'weeklyEngineering', { value: d.weeklyEngineering, min: 0 })}${numfield('دقائق Business أسبوعيًا', 'weeklyBusiness', { value: d.weeklyBusiness, min: 0 })}${numfield('دقائق English يوميًا', 'englishDaily', { value: d.englishDaily, min: 1 })}${datefield(state.date, 'activeDate')}</div><div class="stack" style="margin-top:12px">${d.goals.map((x, i) => txtfield(`الأولوية ${i + 1}`, `goal${i}`, x)).join('')}</div><div class="formactions"><button type="submit" class="btn primary">احفظ التعديلات</button></div></form>`)}${panel('الشكل والألوان','اختار المظهر المريح ليك.',`<div class="row between"><strong>الوضع الحالي: ${isDarkTheme()?'داكن 🌙':'فاتح ☀️'}</strong>${action(isDarkTheme()?'شغّل الوضع الفاتح':'شغّل الوضع الداكن','toggle-theme','','btn')}</div><p class="hint">الداكن هو الافتراضي، واختيارك بيتحفظ على الجهاز ده.</p>`)}${panel('التخزين المحلي', 'الداتا مش محفوظة في حساب أو على Cloud.', `<div class="feature"><div class="statlabel">إجمالي السجلات</div><div class="statnum">${F(stat)}</div><p>التقدم، والعادات، والمال، والصور الخاصة كلها في المتصفح الحالي.</p></div><div class="notice amber" style="margin-top:13px">مسح بيانات المتصفح أو تغيير الموبايل ممكن يضيّع البيانات. صدّر Backup كل فترة واحتفظ بيه في مكان خاص.</div><div class="stack" style="margin-top:15px">${action('نزّل نسخة احتياطية JSON', 'export-data', '', 'btn primary full')}<label class="btn full" for="import-file">استورد نسخة احتياطية <input id="import-file" type="file" accept=".json,application/json" style="display:none"></label>${action('مسح كل بياناتي من الجهاز', 'clear-all', '', 'btn warn full')}</div><div class="hint">الـBackup يشمل الصور والملاحظات والبيانات المالية. ما تشاركهش مع أي حد.</div>`)}</div>
-<div class="sectiontitle"><h2>الانتقال من A إلى B</h2></div>${panel('المزامنة هي المرحلة الجاية، مش موجودة حاليًا', '', `<div class="grid g3"><div class="feature"><h3>دلوقتي: Offline-first</h3><p>IndexedDB + PWA + ملفات Backup محلية.</p></div><div class="feature"><h3>بعدين: حساب شخصي</h3><p>Authentication وقاعدة بيانات مرتبطة بحسابك.</p></div><div class="feature"><h3>وبعدها: Sync</h3><p>رفع سجلات بإذن المستخدم، حل التعارضات، وحماية الصور.</p></div></div><div class="notice" style="margin-top:14px">كل سجل ليه ID وتاريخ آخر تعديل عشان نجهز نقل البيانات وقت ما تختار B. دي جاهزية تصميمية، مش مزامنة شغالة.</div>`)}`;
-}
+function viewSettings(){let d=state.settings;let stat=state.rows.length;return `<div class="pageintro"><p>هنا تقدر تعدل أهدافك وتوزيع وقتك، وتعمل نسخة احتياطية. لو فعّلت حساب السحابة، المزامنة بتشتغل بين أجهزتك، والتطبيق بيفضل يشتغل محليًا وقت انقطاع الإنترنت.</p></div><div class="grid g2">${panel('أهدافك وأولوياتك','غيّرهم براحتك من الموبايل أو الكمبيوتر.',`<form data-form="settings"><div class="formgrid">${txtfield('اسم اختياري للترحيب','displayName',d.displayName||'')}${numfield('دقائق Engineering أسبوعيًا','weeklyEngineering',{value:d.weeklyEngineering,min:0})}${numfield('دقائق Business أسبوعيًا','weeklyBusiness',{value:d.weeklyBusiness,min:0})}${numfield('دقائق English يوميًا','englishDaily',{value:d.englishDaily,min:1})}${datefield(state.date,'activeDate')}</div><div class="stack" style="margin-top:12px">${d.goals.map((x,i)=>txtfield(`الأولوية ${i+1}`,`goal${i}`,x)).join('')}</div><div class="formactions"><button type="submit" class="btn primary">احفظ التعديلات</button></div></form>`)}${panel('الشكل والألوان','اختار المظهر المريح ليك.',`<div class="row between"><strong>الوضع الحالي: ${isDarkTheme()?'داكن 🌙':'فاتح ☀️'}</strong>${action(isDarkTheme()?'شغّل الوضع الفاتح':'شغّل الوضع الداكن','toggle-theme','','btn')}</div><p class="hint">الداكن هو الافتراضي، واختيارك بيتحفظ على الجهاز ده.</p>`)}${panel('التخزين المحلي','نسخة محلية على الجهاز، مع إمكانية تفعيل المزامنة السحابية من القسم التالي.',`<div class="feature"><div class="statlabel">إجمالي السجلات</div><div class="statnum">${F(stat)}</div><p>التقدم، والعادات، والمال، والصور الخاصة كلها في المتصفح الحالي.</p></div><div class="notice amber" style="margin-top:13px">مسح بيانات المتصفح أو تغيير الموبايل ممكن يضيّع البيانات. صدّر Backup كل فترة واحتفظ بيه في مكان خاص.</div><div class="stack" style="margin-top:15px">${action('نزّل نسخة احتياطية JSON','export-data','','btn primary full')}<label class="btn full" for="import-file">استورد نسخة احتياطية <input id="import-file" type="file" accept=".json,application/json" style="display:none"></label>${action('مسح كل بياناتي من الجهاز','clear-all','','btn warn full')}</div><div class="hint">الـBackup يشمل الصور والملاحظات والبيانات المالية. ما تشاركهش مع أي حد.</div>`)}</div>
+<div class="sectiontitle"><h2>حسابك والمزامنة</h2></div>${window.KhotwaCloud.panel()}`;}
+
 function safeNumber(v) { let val = Number(v); return Number.isFinite(val) ? val : 0; }
 async function imageToDataURL(file) { if (file.size > 12 * 1024 * 1024)
     throw Error('الصورة كبيرة جدًا. اختار صورة أقل من 12 ميجابايت.'); return new Promise((resolve, reject) => { let fr = new FileReader(); fr.onload = () => { let img = new Image(); img.onload = () => { let max = 1200, scale = Math.min(1, max / Math.max(img.width, img.height)); let c = document.createElement('canvas'); c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale); let ctx = c.getContext('2d'); if (!ctx)
@@ -285,6 +232,7 @@ async function handleSubmit(e) {
     const get = (key) => getFD(form, key), date = get('date') || state.date;
     const val = (key) => safeNumber(get(key));
     try {
+        if (kind === 'cloud-login' || kind === 'cloud-signup') { await window.KhotwaCloud.submit(form); return; }
         if (kind === 'nutrition-add' || kind === 'nutrition-edit') { await window.KhotwaNutrition.submit(form); return; }
         if (kind === 'edit-record') { await window.KhotwaExperience.submitEdit(form); return; }
         if (kind === 'study') {
@@ -311,7 +259,8 @@ async function handleSubmit(e) {
             let id = form.dataset.key || '';
             await save('business', state.date, { status: get('status'), minutes: val('minutes'), notes: get('notes'), step: id }, `biz-${id}`);
         }
-        if(kind==='smoke-setup'){const quitAt=get('quitAt');if(val('avg')<=0||val('packSize')<=0||val('packPrice')<0)throw Error('راجع بيانات العلبة وعدد السجاير');if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(quitAt)||Number.isNaN(new Date(quitAt).getTime()))throw Error('حدد تاريخ ووقت بداية صحيحين');await saveSettings({...state.settings,smoking:{avg:val('avg'),packSize:val('packSize'),packPrice:val('packPrice'),start:quitAt.slice(0,10),quitAt}});smokeEditing=false;}
+        if(kind==='daily-steps'){const raw=get('count'),count=Number(raw);if(!raw||!Number.isSafeInteger(count)||count<0||count>100000)throw Error('سجّل عدد خطوات صحيح من 0 إلى 100000');await save('steps',date,{count},`steps-${date}`);state.date=date;}
+if(kind==='smoke-setup'){const quitAt=get('quitAt');if(val('avg')<=0||val('packSize')<=0||val('packPrice')<0)throw Error('راجع بيانات العلبة وعدد السجاير');if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(quitAt)||Number.isNaN(new Date(quitAt).getTime()))throw Error('حدد تاريخ ووقت بداية صحيحين');await saveSettings({...state.settings,smoking:{avg:val('avg'),packSize:val('packSize'),packPrice:val('packPrice'),start:quitAt.slice(0,10),quitAt}});smokeEditing=false;}
 
         if (kind === 'smoke') {
             if (get('count') === '' || val('count') < 0)
@@ -431,6 +380,7 @@ async function handleClick(e) {
     }
     let a = el.dataset.action;
     try {
+        if(a?.startsWith('cloud-')){await window.KhotwaCloud.action(a);return;}
         if(a?.startsWith('nutrition-')){await window.KhotwaNutrition.action(a,el,e.target);return;}
         if(a==='toggle-theme'){changeTheme();return;}
         if (a === 'nav') {
@@ -517,26 +467,5 @@ if(a==='routine-rename'){let i=Number(el.dataset.index),old=state.settings.routi
         notice('فيه مشكلة: ' + (err instanceof Error ? err.message : 'خطأ غير معروف'));
     }
 }
-async function boot() { try {
-    state.db = await openDB();
-    state.rows = await dbGetAll('records');
-    let meta = await dbGetAll('meta');
-    let s = meta.find(x => x.id === 'settings')?.data;
-    state.settings = { ...defaults, ...(s || {}) };
-    let x = window.LIFE_OS_ROADMAP;
-    if (!x || !Array.isArray(x.phases) || !x.phases.length)
-        throw Error('الخريطة مش متاحة');
-    document.addEventListener('click', e => void handleClick(e));
-    document.addEventListener('submit', e => void handleSubmit(e));
-    document.addEventListener('change', e => void handleChange(e));
-    document.addEventListener('input',e=>window.KhotwaNutrition.handleInput(e));
-    render();
-    if ('serviceWorker' in navigator && location.protocol !== 'file:')
-        navigator.serviceWorker.register('./sw.js').catch(() => { });
-}
-catch (err) {
-    let app = document.getElementById('app');
-    if (app)
-        app.innerHTML = `<div class="startup"><h1>حصلت مشكلة في تشغيل خطوة</h1><p>جرّب فتحه من localhost أو HTTPS، وتأكد إن المتصفح بيدعم التخزين المحلي.</p><pre>${E(err instanceof Error ? err.message : String(err))}</pre></div>`;
-} }
+async function boot(){try{state.db=await openDB();state.rows=await dbGetAll('records');let meta=await dbGetAll('meta');let s=meta.find(x=>x.id==='settings')?.data;state.settings={...defaults,...(s||{})};let x=window.LIFE_OS_ROADMAP;if(!x||!Array.isArray(x.phases)||!x.phases.length)throw Error('الخريطة مش متاحة');document.addEventListener('click',e=>void handleClick(e));document.addEventListener('submit',e=>void handleSubmit(e));document.addEventListener('change',e=>void handleChange(e));document.addEventListener('input',e=>window.KhotwaNutrition.handleInput(e));render();void window.KhotwaCloud.init({state,dbGetAll,dbPut,dbDelete,render,notice,defaults,switchAccountDatabase,exportLegacy}).then(()=>render()).catch((err)=>notice('تعذر تجهيز السحابة: '+(err instanceof Error?err.message:String(err))));if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('./sw.js').catch(()=>{});}catch(err){let app=document.getElementById('app');if(app)app.innerHTML=`<div class="startup"><h1>حصلت مشكلة في تشغيل خطوة</h1><p>جرّب فتحه من localhost أو HTTPS، وتأكد إن المتصفح بيدعم التخزين المحلي.</p><pre>${E(err instanceof Error?err.message:String(err))}</pre></div>`;}}
 void boot();
