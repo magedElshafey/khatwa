@@ -250,6 +250,7 @@ async function sync(){
  finally{working=false;}
 }
 async function signout(){
+ if(working){hooks.notice('المزامنة شغالة دلوقتي. جرّب تسجيل الخروج بعد لحظات.');return;}
  if(pending.length && !confirm('فيه تغييرات لسه مستنية اتصال الإنترنت عشان تتزامن. الأفضل تستنى قبل تسجيل الخروج. تخرج رغم كده؟'))return;
  if(!confirm('تسجيل خروج من الجهاز ده؟ مش هيمسح بيانات حسابك من السحابة.'))return;
  enabled=false;prepared=false;migrationRequired=false;
@@ -305,7 +306,7 @@ function panel(){
  <div class="row cloud-actions"><button class="btn" data-action="cloud-sync-now">زامن دلوقتي</button><button class="btn ghost" data-action="cloud-signout">تسجيل خروج</button></div>
  <p class="hint">آخر اتصال ناجح: ${esc(lastSynced||'جاري التحضير أو بدون اتصال')} · في انتظار الرفع: ${pending.length} · التحديثات بتتسحب تلقائيًا.</p>
  <div class="notice">الصور الخاصة بتفضل على جهازك. البيانات التانية بتتزامن مع حسابك لما الإنترنت يكون متاح. سجل التغييرات على السحابة يحفظ التحديثات ويحل تعارض نفس السجل بآخر تغيير وصل.</div>
- ${legacySnapshot.rows.length&&!legacyImported?'<button class="btn sm" data-action="cloud-import-legacy">استيراد بيانات الجهاز القديمة</button>':''}
+ ${legacySnapshot.rows.length&&!legacyImported&&(!owner()||owner()===session?.user?.id)?'<button class="btn sm" data-action="cloud-import-legacy">استيراد بيانات الجهاز القديمة</button>':''}
  </div>`;
 }
 window.KhotwaCloud={
