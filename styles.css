@@ -299,7 +299,7 @@ html{scrollbar-gutter:stable}
 .khatwa-toast{
  --toast-accent:var(--blue);position:relative;display:flex;align-items:flex-start;gap:12px;
  min-width:0;overflow:hidden;pointer-events:auto;
- padding:13px 42px 13px 15px;min-height:66px;
+ padding:13px 15px 13px 42px;min-height:66px;
  border:1px solid var(--line);border-radius:15px;
  background:var(--paper);color:var(--ink);
  box-shadow:0 12px 32px rgba(0,0,0,.12),0 2px 7px rgba(0,0,0,.05);
@@ -326,7 +326,7 @@ html{scrollbar-gutter:stable}
 @keyframes khatwa-toast-time{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 @media(max-width:760px){
  .khatwa-toast-region{inset-inline-start:14px;inset-inline-end:14px;bottom:calc(82px + env(safe-area-inset-bottom));width:auto;max-width:none}
- .khatwa-toast{padding:12px 41px 12px 13px;min-height:60px;border-radius:14px}
+ .khatwa-toast{padding:12px 13px 12px 41px;min-height:60px;border-radius:14px}
 }
 @media(prefers-reduced-motion:reduce){
  .khatwa-toast,.khatwa-toast.is-leaving{animation:none!important}
