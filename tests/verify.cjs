@@ -84,6 +84,8 @@ assert(text('styles.css').includes('border-bottom:1px solid transparent'),'summa
 assert(text('styles.css').includes('.sprint>summary::marker'),'native details marker is not normalized');
 assert(vm.runInContext('viewLearning()',ctx).includes('data-accordion-id="learning-'),'learning accordion IDs missing');
 assert(vm.runInContext('viewBusiness()',ctx).includes('data-accordion-id="business-'),'business accordion IDs missing');
+const cloudForAccordion=ctx.window.KhotwaCloud;
+cloudForAccordion.isReady=()=>true;cloudForAccordion.isAuthenticated=()=>true;cloudForAccordion.isPrepared=()=>true;
 const beforeDetail={dataset:{accordionId:'learning-test'},open:false};
 const afterDetail={dataset:{accordionId:'learning-test'},open:true};
 const host={replaced:false,querySelectorAll(){return this.replaced?[afterDetail]:[beforeDetail];},querySelector(){return null;}};
@@ -91,6 +93,7 @@ Object.defineProperty(host,'innerHTML',{set(){this.replaced=true;}});
 ctx.document.getElementById=()=>host;
 vm.runInContext("state.page='learning';lastRenderedPage='learning';render()",ctx);
 assert.equal(afterDetail.open,false,'accordion was reopened after a same-page render');
+cloudForAccordion.isReady=()=>false;cloudForAccordion.isAuthenticated=()=>false;cloudForAccordion.isPrepared=()=>false;
 
 
 let out=vm.runInContext(`state.settings.smoking={avg:20,packSize:20,packPrice:100,start:'2026-11-20'};state.rows=[{id:'smoke-2026-11-20',collection:'smoking',date:'2026-11-20',data:{count:0},updatedAt:''},{id:'smoke-2026-11-21',collection:'smoking',date:'2026-11-21',data:{count:5},updatedAt:''},{id:'smoke-2026-11-19',collection:'smoking',date:'2026-11-19',data:{count:0},updatedAt:''}];smokeMath()`,ctx);
@@ -114,6 +117,16 @@ assert(oldSpiritual.includes('أذكار الصباح')&&oldSpiritual.includes('
 assert(!oldSpiritual.includes('data-spirit="adhkar"'),'combined checkbox must be removed');
 assert(oldSpiritual.includes('تسجيل أذكار قديم غير مقسّم'),'historic adhkar must be preserved without guessing');
 assert(oldSpiritual.includes('0 / 9'),'legacy check cannot be silently counted as both new options');
+// Daily step target is a separate numerical habit, not an invented completed checkbox.
+const unrecordedSteps=vm.runInContext("state.date='2026-11-22';viewSpiritual()",ctx);
+assert(unrecordedSteps.includes('٨٬٠٠٠ خطوة')&&unrecordedSteps.includes('data-form="daily-steps"'),'daily steps entry is missing');
+assert(unrecordedSteps.includes('لسه مفيش عدد خطوات مسجل'),'missing steps must not be counted as completed');
+const recordedSteps=vm.runInContext("state.rows.push({id:'steps-2026-11-22',collection:'steps',date:'2026-11-22',data:{count:6400},updatedAt:''});viewSpiritual()",ctx);
+assert(recordedSteps.includes('value="6400"'),'existing steps need to be editable');
+assert(recordedSteps.includes('متبقي'),'step target progress missing');
+assert(vm.runInContext("viewToday()",ctx).includes('عادة ٨٬٠٠٠ خطوة'),'steps reminder missing from Today');
+const gateHTML=vm.runInContext("state.page='today';render();document.getElementById('app').innerHTML",ctx);
+assert(gateHTML.includes('auth-shell')&&!gateHTML.includes('class="side"'),'dashboard exposed before login');
 const sleepHtml=vm.runInContext("viewSleep()",ctx);
 assert(sleepHtml.includes('data-sleep="screen"'),'bedtime checklist not available');
 assert(sleepHtml.includes('data-form="sleep-add"'),'bedtime routine must be customizable');
@@ -145,8 +158,12 @@ assert(smokingScreen.includes('بافتراض إنك ما دخّنتش'),'potent
 
 // Cloud remains off until the user enables synchronization after signing in.
 assert.equal(ctx.window.KhotwaCloud.isActive(),false,'Cloud sync must be opt-in');
-assert(ctx.window.KhotwaCloud.panel().includes('data-form="cloud-login"'),'login UI missing');
-assert(ctx.window.KhotwaCloud.panel().includes('data-form="cloud-signup"'),'signup UI missing');
+assert(ctx.window.KhotwaCloud.loginView().includes('data-form="cloud-login"'),'login entry point missing');
+assert(ctx.window.KhotwaCloud.loginView().includes('data-action="cloud-auth-signup"'),'signup tab missing');
+assert(ctx.window.KhotwaCloud.migrationView().includes('data-action="cloud-import-legacy"'),'legacy migration gate missing');
+assert(ctx.window.KhotwaCloud.loadingView().includes('بنفتح حسابك'),'auth loading screen missing');
+assert.equal(ctx.window.KhotwaCloud.isAuthenticated(),false,'app must require sign-in before content');
+assert.equal(ctx.window.KhotwaCloud.isReady(),false,'app must withhold content until auth is restored');
 assert(text('index.html').includes('src="./cloud-sync.js"'),'cloud JS missing in entry');
 assert(text('scripts/build.cjs').includes("'cloud-sync.js'"),'cloud JS not packaged');
 assert(text('sw.js').includes("'./cloud-sync.js'"),'cloud JS not cached offline');
