@@ -79,7 +79,7 @@ async function exportLegacy(rows,settings){
  await download(`khotwa-legacy-backup-${today()}.json`,JSON.stringify({format:'khotwa-life-os-backup',schemaVersion:1,exportedAt:new Date().toISOString(),settings,records:rows},null,2),'application/json');
  notice('اتعملت نسخة احتياطية من بياناتك القديمة.');
 }
-function notice(text) { let old = document.querySelector('.alert'); old?.remove(); let el = document.createElement('div'); el.className = 'alert'; el.textContent = text; el.setAttribute('role', 'status'); document.body.append(el); setTimeout(() => el.remove(), 3800); }
+function notice(text,type='success'){window.KhatwaToast.show(text,{type});}
 const getFD = (f, key) => String(new FormData(f).get(key) ?? '').trim();
 function allSessions() { return window.LIFE_OS_ROADMAP.phases.flatMap((p) => p.sprints.flatMap((s) => [['A', s.a], ['B', s.b], ['L', s.lab]].map(([k, v]) => ({ key: `${s.id}-${k}`, phase: p, sprint: s, kind: k, title: v.title || v.task || v.evidence || 'تطبيق', theory: v.theory || '', practice: v.practice || v.evidence || '', level: v.level || 'P0' })))); }
 function nextSession() { return allSessions().find(s => row('learning-' + s.key)?.data?.status !== 'completed'); }
@@ -221,7 +221,7 @@ async function restore(f) { if (f.size > 35 * 1024 * 1024)
     return reject(Error('DB unavailable')); let tx = state.db.transaction(['records', 'meta'], 'readwrite'); tx.objectStore('records').clear(); tx.objectStore('meta').clear(); for (let r of clean)
     tx.objectStore('records').put(r); tx.objectStore('meta').put({ id: 'settings', data: settings, updatedAt: new Date().toISOString() }); tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); }); state.rows = clean; state.settings = settings; render(); notice('تم استيراد النسخة بنجاح.'); }
 async function wipe() { if (!confirm('متأكد إنك عايز تمسح كل سجلاتك وصورك من الجهاز ده؟ العملية مش هتتراجع من غير Backup.'))
-    return; await dbClear('records'); await dbClear('meta'); state.rows = []; state.settings = { ...defaults }; render(); notice('اتمسحت البيانات المحلية.'); }
+    return; await dbClear('records'); await dbClear('meta'); state.rows = []; state.settings = { ...defaults }; render(); notice('اتمسحت البيانات المحلية.','warning'); }
 let smokeEditing = false;
 async function handleSubmit(e) {
     let form = e.target;
@@ -241,7 +241,7 @@ async function handleSubmit(e) {
             if (!sess)
                 throw Error('الجلسة مش موجودة');
             if (get('status') === 'completed' && !get('notes') && !get('evidence')) {
-                notice('قبل ما تقول خلصت: سجّل شرح بسيط أو دليل على التطبيق.');
+                notice('قبل ما تقول خلصت: سجّل شرح بسيط أو دليل على التطبيق.','warning');
                 return;
             }
             await save('learning', state.date, { key, phase: sess.phase.id, sprint: sess.sprint.id, status: get('status'), minutes: val('minutes'), source: get('source'), evidence: get('evidence'), notes: get('notes'), question: get('question'), self: get('self') }, `learning-${key}`);
@@ -327,7 +327,7 @@ if (kind === 'routine-add') {
         notice('اتحفظ بنجاح على جهازك.');
     }
     catch (err) {
-        notice('مقدرتش أحفظ: ' + (err instanceof Error ? err.message : 'خطأ غير معروف'));
+        notice('مقدرتش أحفظ: ' + (err instanceof Error ? err.message : 'خطأ غير معروف'),'error');
     }
 }
 async function handleChange(e) {
@@ -366,7 +366,7 @@ if (t.dataset.routine !== undefined) {
         }
     }
     catch (err) {
-        notice('تعذر التحديث: ' + (err instanceof Error ? err.message : 'خطأ'));
+        notice('تعذر التحديث: ' + (err instanceof Error ? err.message : 'خطأ'),'error');
     }
 }
 async function handleClick(e) {
@@ -464,7 +464,7 @@ if(a==='routine-rename'){let i=Number(el.dataset.index),old=state.settings.routi
         }
     }
     catch (err) {
-        notice('فيه مشكلة: ' + (err instanceof Error ? err.message : 'خطأ غير معروف'));
+        notice('فيه مشكلة: ' + (err instanceof Error ? err.message : 'خطأ غير معروف'),'error');
     }
 }
 async function boot(){try{state.db=await openDB();state.rows=await dbGetAll('records');let meta=await dbGetAll('meta');let s=meta.find(x=>x.id==='settings')?.data;state.settings={...defaults,...(s||{})};let x=window.LIFE_OS_ROADMAP;if(!x||!Array.isArray(x.phases)||!x.phases.length)throw Error('الخريطة مش متاحة');document.addEventListener('click',e=>void handleClick(e));document.addEventListener('submit',e=>void handleSubmit(e));document.addEventListener('change',e=>void handleChange(e));document.addEventListener('input',e=>window.KhotwaNutrition.handleInput(e));render();void window.KhotwaCloud.init({state,dbGetAll,dbPut,dbDelete,render,notice,defaults,switchAccountDatabase,exportLegacy}).then(()=>render()).catch((err)=>notice('تعذر تجهيز السحابة: '+(err instanceof Error?err.message:String(err))));if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('./sw.js').catch(()=>{});}catch(err){let app=document.getElementById('app');if(app)app.innerHTML=`<div class="startup"><h1>حصلت مشكلة في تشغيل خطوة</h1><p>جرّب فتحه من localhost أو HTTPS، وتأكد إن المتصفح بيدعم التخزين المحلي.</p><pre>${E(err instanceof Error?err.message:String(err))}</pre></div>`;}}
