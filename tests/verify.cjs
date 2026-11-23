@@ -8,6 +8,7 @@ vm.runInContext(text('experience.js'),ctx);
 vm.runInContext(text('nutrition.js'),ctx);
 vm.runInContext(text('smoking-insights.js'),ctx);
 vm.runInContext(text('cloud-sync.js'),ctx);
+vm.runInContext(text('quit-support.js'),ctx);
 const appPath=fs.existsSync(path.join(root,'dist','app.js'))?'dist/app.js':'app.js';
 vm.runInContext(text(appPath).replace(/void boot\(\);\s*$/,''),ctx);
 for(const fn of ['viewToday','viewLearning','viewEnglish','viewBusiness','viewSmoking','viewWorkout','viewNutrition','viewBody','viewSpiritual','viewRoutine','viewSleep','viewMoney','viewSocial','viewReview','viewSettings','viewMore']){
@@ -105,6 +106,24 @@ assert.equal(partial.days,0,'partial start date must not be counted as a clean f
 assert.equal(partial.avoided,15,'partial start date must not count estimated avoided cigarettes');
 assert.equal(partial.saved,75,'partial day should not inflate estimated savings');
 assert.equal(partial.eligible,1,'only complete logged days count in estimated totals');
+
+// Automatic elapsed timer depends on the timestamp rather than manual daily logs.
+const timer=ctx.window.KhatwaQuit;
+const t0=new Date('2026-11-20T08:30:00').getTime();
+const d=timer.elapsed('2026-11-20T08:30',t0+(2*86400+3*3600+17*60)*1000);
+assert.equal(d.days,2);assert.equal(d.hours,3);assert.equal(d.minutes,17);
+assert.equal(timer.elapsed('2026-11-20T08:30',t0-60000).future,true,'future starts should not show negative durations');
+assert.equal(timer.elapsed('bad timestamp',t0).valid,false,'invalid time must be rejected');
+const cfgTimer=vm.runInContext("state.settings.smoking.quitAt='2026-11-20T08:30';viewSmoking()",ctx);
+assert(cfgTimer.includes('data-quit-clock-days')&&cfgTimer.includes('data-quit-clock-hours')&&cfgTimer.includes('data-quit-clock-minutes'),'automatic day/hour/minute clock is missing');
+assert(!cfgTimer.includes('أيام بدون تدخين — مسجلة'),'manual day log must not remain the main counter');
+assert(cfgTimer.includes('تسجيل الأيام (اختياري)'),'daily log should be optional');
+assert(cfgTimer.includes('أسبابك للإقلاع')&&cfgTimer.includes('ساعدني أعدّي الرغبة'),'motivations and urge support missing');
+assert(cfgTimer.includes('التسجيلات السابقة'),'slip records section missing');
+assert(text('index.html').includes('src="./quit-support.js"'),'quitting support JS missing in entry');
+assert(text('sw.js').includes("'./quit-support.js'"),'quitting support must be cached offline');
+assert(text('scripts/build.cjs').includes("'quit-support.js'"),'quitting support script must ship in Vercel build');
+
 const setupHtml=vm.runInContext("smokeEditing=true;viewSmoking()",ctx);
 assert(setupHtml.includes('type="datetime-local"')&&setupHtml.includes('name="quitAt"'),'quit time picker is required');
 vm.runInContext("smokeEditing=false",ctx);
@@ -115,6 +134,7 @@ assert(text('sw.js').includes("'./toasts.js'"),'toast script must be available o
 assert(text('scripts/build.cjs').includes("'toasts.js'"),'toast script must ship with the production build');
 assert.doesNotThrow(()=>new vm.Script(text('app.js')),'tracked browser app.js has a syntax error');
 assert.doesNotThrow(()=>new vm.Script(text('cloud-sync.js')),'cloud sync JS has a syntax error');
+assert.doesNotThrow(()=>new vm.Script(text('quit-support.js')),'quit support JS has a syntax error');
 assert.doesNotThrow(()=>new vm.Script(text('toasts.js')),'toast UI script has a syntax error');
 assert.doesNotThrow(()=>new vm.Script(text('smoking-insights.js')),'milestone script has a syntax error');
 assert.doesNotThrow(()=>new vm.Script(text('sw.js')),'service worker source has a syntax error');
@@ -181,7 +201,7 @@ assert.equal(strippedPhoto.data.photo,undefined,'private photo must stay local')
 assert.equal(strippedPhoto.data.weight,80,'normal values still synchronize');
 let nu=vm.runInContext(`nutritionTotals([{data:{grams:200,calories:100,protein:5,carbs:20,satfat:1,unsatfat:2,otherfat:0}}])`,ctx);
 assert.equal(nu.calories,200);assert.equal(nu.protein,10);assert.equal(nu.carbs,40);
-for(const f of ['index.html','styles.css','toasts.js','experience.js','nutrition.js','smoking-insights.js','cloud-sync.js','app.js','roadmap-data.js','sw.js','manifest.webmanifest','assets/icon-192.png','assets/icon-512.png'])assert(fs.existsSync(path.join(root,f)),`missing ${f}`);
+for(const f of ['index.html','styles.css','toasts.js','experience.js','nutrition.js','smoking-insights.js','cloud-sync.js','quit-support.js','app.js','roadmap-data.js','sw.js','manifest.webmanifest','assets/icon-192.png','assets/icon-512.png'])assert(fs.existsSync(path.join(root,f)),`missing ${f}`);
 const m=JSON.parse(text('manifest.webmanifest'));assert(m.icons?.length>=2);
 console.log('✓ 16 views rendered, 144 learning units loaded, smoking/nutrition math correct, PWA assets present.');
 console.log('Note: Browser-based visual/offline interaction testing must still be done after HTTPS deployment.');
