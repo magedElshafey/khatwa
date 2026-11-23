@@ -5,7 +5,7 @@
 const URL_BASE='https://ixndngfxnbnjeykdeqhd.supabase.co';
 const API_KEY='sb_publishable_7-Nv0PIUCSJDQWw-ONN9Cw_Y3DBtCTw';
 const AUTH_STORAGE='khotwa-cloud-session-v1', OWNER_STORAGE='khotwa-cloud-owner-v1';
-let hooks=null,session=null,enabled=false,pending=[],working=false,queueLock=Promise.resolve(),lastError='',lastSynced='',poller=null,deviceId='',ready=false,prepared=false,migrationRequired=false,authMode='login',authNotice='',legacySnapshot={rows:[],settings:null,meta:[]};
+let hooks=null,session=null,enabled=false,pending=[],working=false,queueLock=Promise.resolve(),lastError='',lastSynced='',poller=null,deviceId='',ready=false,prepared=false,migrationRequired=false,legacyImported=false,authMode='login',authNotice='',legacySnapshot={rows:[],settings:null,meta:[]};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const state=()=>hooks.state;
 const canRun=()=>!!(session&&enabled);
@@ -80,6 +80,7 @@ async function connectAccount(){
  pending=meta.find(x=>x.id===queueKey())?.data||[];
  if(!Array.isArray(pending))pending=[];
  const linked=meta.find(x=>x.id===linkedKey())?.data===true;
+ legacyImported=meta.find(x=>x.id==='cloud-legacy-imported:'+session.user.id)?.data===true;
  const legacyOwned=owner();
  const canImportLegacy=legacySnapshot.rows.length && (!legacyOwned||legacyOwned===session.user.id);
  if(!linked&&canImportLegacy){
@@ -117,6 +118,7 @@ async function importLegacy(){
  const oldPending=legacySnapshot.meta.find(x=>x.id==='cloud-outbox:'+session.user.id)?.data;
  if(Array.isArray(oldPending))pending.push(...oldPending.filter(e=>e&&e.user_id===session.user.id));
  await putMeta(queueKey(),pending);
+ await putMeta('cloud-legacy-imported:'+session.user.id,true);legacyImported=true;
  await finishLink();
  authNotice='استوردنا سجلات الجهاز القديمة. لو الإنترنت فصل هتكمل المزامنة لما يرجع.';
  hooks.render();
@@ -303,16 +305,15 @@ function panel(){
  <div class="row cloud-actions"><button class="btn" data-action="cloud-sync-now">زامن دلوقتي</button><button class="btn ghost" data-action="cloud-signout">تسجيل خروج</button></div>
  <p class="hint">آخر اتصال ناجح: ${esc(lastSynced||'جاري التحضير أو بدون اتصال')} · في انتظار الرفع: ${pending.length} · التحديثات بتتسحب تلقائيًا.</p>
  <div class="notice">الصور الخاصة بتفضل على جهازك. البيانات التانية بتتزامن مع حسابك لما الإنترنت يكون متاح. سجل التغييرات على السحابة يحفظ التحديثات ويحل تعارض نفس السجل بآخر تغيير وصل.</div>
- ${legacySnapshot.rows.length?'<button class="btn sm" data-action="cloud-import-legacy">استيراد بيانات الجهاز القديمة</button>':''}
+ ${legacySnapshot.rows.length&&!legacyImported?'<button class="btn sm" data-action="cloud-import-legacy">استيراد بيانات الجهاز القديمة</button>':''}
  </div>`;
 }
 window.KhotwaCloud={
- init:async h=>{hooks=h;try{await boot()}catch(e){lastError=String(e.message||e);if(!session)prepared=false}finally{ready=true}},
+ init:async h=>{hooks=h;try{await boot()}catch(e){lastError=String(e.message||e);saveSession(null);prepared=false}finally{ready=true}},
  panel,submit,action,enqueue,sync,
  isActive:()=>canRun(),isReady:()=>ready,isAuthenticated:()=>!!session?.user?.id,isPrepared:()=>prepared,
  loginView,migrationView,loadingView,
  getStatus:()=>({connected:!!session,enabled,prepared,migrationRequired,pending:pending.length,lastError,lastSynced}),
  sanitize:safePayload
 };
-}());
 }());
