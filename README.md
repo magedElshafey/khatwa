@@ -85,3 +85,7 @@ The records use stable IDs and updatedAt fields so a later authenticated backend
 - On a fresh device with no anonymous records, authentication automatically starts cloud synchronization and restores the account's records. On subsequent visits, the saved session restores access; local cached records work offline after prior login. Records saved offline are queued for later upload.
 - The habits page includes a manual `8,000 steps` daily tracker with progress and editing for a selected date. It does not access Apple Health or claim automatic step counting.
 - Email signup still requires correct Supabase Auth Site URL and Redirect URLs configured for the deployed hostname. Email verification can be completed before signing in with the form.
+
+## Global toast notifications
+
+The previous single `.alert` element was replaced with a tiny, dependency-free `window.KhatwaToast` module (`toasts.js`) shared by all Khatwa screens. Use `KhatwaToast.success(message)`, `.error(message)`, `.warning(message)`, `.info(message)` or `.show(message,{type})`. User-facing messages are rendered as plain text, not HTML. Toasts have bounded stacking, sensible auto-dismiss durations, pause on hover/keyboard focus, accessible status/alert roles, close controls, touch swipe dismiss, RTL-aware position, dark/light theme, responsive placement above the mobile nav, and reduced-motion support. Destructive confirmations remain confirmation dialogs, not transient toasts.
