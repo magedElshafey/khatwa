@@ -5,7 +5,7 @@
 const URL_BASE='https://ixndngfxnbnjeykdeqhd.supabase.co';
 const API_KEY='sb_publishable_7-Nv0PIUCSJDQWw-ONN9Cw_Y3DBtCTw';
 const AUTH_STORAGE='khotwa-cloud-session-v1', OWNER_STORAGE='khotwa-cloud-owner-v1';
-let hooks=null,session=null,enabled=false,pending=[],working=false,queueLock=Promise.resolve(),lastError='',lastSynced='',poller=null,deviceId='';
+let hooks=null,session=null,enabled=false,pending=[],working=false,queueLock=Promise.resolve(),lastError='',lastSynced='',poller=null,deviceId='',ready=false,prepared=false,migrationRequired=false,authMode='login',authNotice='',legacySnapshot={rows:[],settings:null,meta:[]};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const state=()=>hooks.state;
 const canRun=()=>!!(session&&enabled);
@@ -48,26 +48,91 @@ async function putMeta(key,data){await hooks.dbPut('meta',{id:key,data,updatedAt
 function queueKey(){return 'cloud-outbox:'+session.user.id}
 function cursorKey(){return 'cloud-cursor:'+session.user.id}
 function enabledKey(){return 'cloud-enabled:'+session.user.id}
+function linkedKey(){return 'cloud-account-ready:'+session.user.id}
 function deviceKey(){return 'cloud-device-v1'}
 async function boot(){
  if(!hooks)return;
- const meta=await hooks.dbGetAll('meta');
- const device=meta.find(x=>x.id===deviceKey())?.data;
+ // Capture the original anonymous IndexedDB before switching to an account-specific DB.
+ const originalMeta=await hooks.dbGetAll('meta');
+ legacySnapshot={rows:state().rows.slice(),settings:state().settings,meta:originalMeta};
+ const device=originalMeta.find(x=>x.id===deviceKey())?.data;
  deviceId=typeof device==='string'?device:id();
  if(!device)await putMeta(deviceKey(),deviceId);
  session=loadSession();
  if(!session?.user?.id){session=null;return}
- if(owner() && owner()!==session.user.id){saveSession(null);lastError='هذا الجهاز مرتبط بحساب آخر. احتفظ بنسخة احتياطية قبل تغيير الحساب.';return}
- enabled=meta.find(x=>x.id===enabledKey())?.data===true;
+ // Persistent sessions work across browser restarts. Refresh expired tokens online.
+ if(navigator.onLine!==false){
+  try{
+   const user=await authRequest('user',{headers:{Authorization:'Bearer '+await token()}});
+   if(!user.id||user.id!==session.user.id)throw Error('تعذر تأكيد حسابك، سجّل الدخول مرة أخرى.');
+  }catch(e){
+   // Network errors don't log out a previously trusted device; invalid credentials do.
+   if(e instanceof TypeError){lastError='مش قادر أتصل بالسحابة الآن؛ هنستخدم النسخة المحلية المربوطة بحسابك.'}
+   else {saveSession(null);lastError='جلسة الدخول انتهت. سجّل دخولك مرة تانية.';return}
+  }
+ }
+ await connectAccount();
+}
+async function connectAccount(){
+ if(!session?.user?.id)throw Error('سجّل دخول أولًا');
+ await hooks.switchAccountDatabase(session.user.id);
+ const meta=await hooks.dbGetAll('meta');
  pending=meta.find(x=>x.id===queueKey())?.data||[];
- // Offline reload must keep capturing edits to the durable outbox.
- if(enabled)startPolling();
- if(navigator.onLine===false){lastError='أنت بدون إنترنت؛ التعديلات هتتزامن لما الاتصال يرجع.';return;}
- try{
-  const user=await authRequest('user',{headers:{Authorization:'Bearer '+await token()}});
-  if(!user.id||user.id!==session.user.id)throw Error('تعذر تأكيد الحساب');
-  if(enabled)void sync();
- }catch(err){lastError=err.message||String(err)}
+ if(!Array.isArray(pending))pending=[];
+ const linked=meta.find(x=>x.id===linkedKey())?.data===true;
+ const legacyOwned=owner();
+ const canImportLegacy=legacySnapshot.rows.length && (!legacyOwned||legacyOwned===session.user.id);
+ if(!linked&&canImportLegacy){
+  migrationRequired=true;prepared=false;enabled=false;return;
+ }
+ migrationRequired=false;
+ prepared=true;
+ enabled=true;
+ if(!linked)await putMeta(linkedKey(),true);
+ await putMeta(enabledKey(),true);
+ startPolling();
+ if(navigator.onLine!==false)await sync();
+}
+async function importLegacy(){
+ if(!session?.user?.id)throw Error('سجّل دخول الأول');
+ if(!migrationRequired&&prepared&&legacySnapshot.rows.length===0)return;
+ if(owner()&&owner()!==session.user.id)throw Error('البيانات القديمة تخص حسابًا مختلفًا.');
+ const records=legacySnapshot.rows;
+ if(!records.length){await prepareWithoutImport();return}
+ if(!confirm('هننسخ '+records.length+' سجل من بيانات الجهاز القديمة إلى حسابك السحابي. احتفظ بنسخة احتياطية قبل الاستيراد. هل توافق؟'))return;
+ if(navigator.onLine!==false){
+  const server=await request('khatwa_events?select=id&limit=1');
+  if(server?.length&&!confirm('الحساب فيه بيانات على السحابة بالفعل. لو سجل قديم له نفس المعرّف، آخر تعديل مستورد ممكن يتغلب على السجل السحابي. هل توافق على الدمج؟'))return;
+ }
+ for(const r of records){
+  await hooks.dbPut('records',r);
+  state().rows=state().rows.filter(x=>x.id!==r.id).concat(r);
+  pending.push({id:id(),user_id:session.user.id,device_id:deviceId,entity_id:r.id,kind:'record',operation:'upsert',payload:safePayload(r)});
+ }
+ if(legacySnapshot.settings){
+  state().settings={...hooks.defaults,...legacySnapshot.settings};
+  await hooks.dbPut('meta',{id:'settings',data:state().settings,updatedAt:new Date().toISOString()});
+  pending.push({id:id(),user_id:session.user.id,device_id:deviceId,entity_id:'settings',kind:'settings',operation:'upsert',payload:{data:state().settings,updatedAt:new Date().toISOString()}});
+ }
+ const oldPending=legacySnapshot.meta.find(x=>x.id==='cloud-outbox:'+session.user.id)?.data;
+ if(Array.isArray(oldPending))pending.push(...oldPending.filter(e=>e&&e.user_id===session.user.id));
+ await putMeta(queueKey(),pending);
+ await finishLink();
+ authNotice='استوردنا سجلات الجهاز القديمة. لو الإنترنت فصل هتكمل المزامنة لما يرجع.';
+ hooks.render();
+}
+async function prepareWithoutImport(){
+ if(!confirm('بيانات الجهاز القديمة هتفضل محفوظة في تخزينها الأصلي ومش هنرفعها أو نحذفها. هنفتح بيانات حسابك السحابي فقط. تكمل؟'))return;
+ await finishLink();
+ authNotice='تم ربط الحساب. بيانات الجهاز القديمة محفوظة بشكل منفصل.';
+ hooks.render();
+}
+async function finishLink(){
+ await putMeta(linkedKey(),true);
+ await putMeta(enabledKey(),true);
+ migrationRequired=false;prepared=true;enabled=true;
+ startPolling();
+ if(navigator.onLine!==false)await sync();
 }
 async function submit(form){
  const kind=String(form.dataset.form);
