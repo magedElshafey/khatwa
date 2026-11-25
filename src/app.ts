@@ -150,6 +150,7 @@ function viewToday():string {
  const session=nextSession();
  const english=row('english-'+state.date),routine=row('routine-'+state.date);
  const workoutEntries=onDate('workout').length;
+ const stepCount=row('steps-'+state.date)?.data?.count;
  const total=allSessions().length,done=completedSessions();
  const primary=session?action('افتح الجلسة','open-session',`data-key="${E(session.key)}"`,'btn primary'):action('راجع تقدمك','nav','data-page="progress"','btn primary');
  const quick=[
@@ -161,7 +162,7 @@ function viewToday():string {
  <header class="today-greeting"><span class="eyebrow">خطوة بخطوة</span><h2>${state.settings.displayName?'أهلًا، '+E(state.settings.displayName):'أهلًا بيك في مساحتك'}</h2><p>ركّز على خطوة واحدة، والباقي هتلاقيه في الأقسام.</p></header>
  <section class="card today-next" aria-labelledby="today-next-title"><div class="today-next-label">خطوتك الجاية</div><h3 id="today-next-title">${session?E(session.title):'خلصت الجلسات المسجلة في المسار'}</h3><p>${session?'ابدأ الجلسة الجاية وارجع سجّل اللي اتعلمته.':'راجع معايير الانتقال ونتائجك في صفحة التقدم.'}</p><div class="today-next-actions">${primary}</div></section>
  <section aria-labelledby="today-quick-title"><div class="sectiontitle"><h2 id="today-quick-title">إجراءات سريعة</h2></div><div class="today-quick-actions">${quick.map(item=>`<button type="button" class="today-quick-action" data-nav="${item.page}"><span class="today-quick-symbol" aria-hidden="true">${item.symbol}</span><strong>${E(item.title)}</strong><small>${E(item.subtitle)}</small></button>`).join('')}</div></section>
- <section aria-labelledby="today-summary-title"><div class="sectiontitle"><h2 id="today-summary-title">ملخص بسيط</h2>${action('التفاصيل','nav','data-page="progress"','btn sm')}</div><div class="grid today-summary-grid"><div class="card"><div class="statlabel">التعلم المكتمل</div><div class="statnum statcolor">${F(done)} / ${F(total)}</div>${bar(done,total)}</div><div class="card"><div class="statlabel">تمارين اليوم</div><div class="statnum">${F(workoutEntries)}</div><div class="statmeta">مجموعات مسجلة في اليوم المختار</div></div></div></section>
+ <section aria-labelledby="today-summary-title"><div class="sectiontitle"><h2 id="today-summary-title">ملخص بسيط</h2>${action('التفاصيل','nav','data-page="progress"','btn sm')}</div><div class="grid today-summary-grid"><div class="card"><div class="statlabel">التعلم المكتمل</div><div class="statnum statcolor">${F(done)} / ${F(total)}</div>${bar(done,total)}</div><div class="card"><div class="statlabel">عادة ٨٬٠٠٠ خطوة</div><div class="statnum">${stepCount==null?'—':F(n(stepCount))}</div><div class="statmeta">${stepCount==null?'لسه مفيش عدد خطوات مسجل':'خطوة مسجلة في اليوم المختار'}</div>${action('سجّل الخطوات','nav','data-page="spiritual"','btn sm')}</div></div></section>
  <p class="today-hint">الأيام اللي ما سجلتش فيها مش بتتحسب إنجاز أو فشل. <button type="button" data-nav="more" class="link-btn">كل الأقسام</button></p>
  </div>`;
 }
