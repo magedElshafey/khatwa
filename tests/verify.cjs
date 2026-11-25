@@ -11,7 +11,7 @@ vm.runInContext(text('cloud-sync.js'),ctx);
 vm.runInContext(text('quit-support.js'),ctx);
 const appPath=fs.existsSync(path.join(root,'dist','app.js'))?'dist/app.js':'app.js';
 vm.runInContext(text(appPath).replace(/void boot\(\);\s*$/,''),ctx);
-for(const fn of ['viewToday','viewLearning','viewEnglish','viewBusiness','viewSmoking','viewWorkout','viewNutrition','viewBody','viewSpiritual','viewRoutine','viewSleep','viewMoney','viewSocial','viewReview','viewSettings','viewMore']){
+for(const fn of ['viewToday','viewProgress','viewHealth','viewLife','viewLearning','viewEnglish','viewBusiness','viewSmoking','viewWorkout','viewNutrition','viewBody','viewSpiritual','viewRoutine','viewSleep','viewMoney','viewSocial','viewReview','viewSettings','viewMore']){
  let rendered=vm.runInContext(fn+'()',ctx);
  assert.equal(typeof rendered,'string');assert(rendered.length>300,fn+' rendered too little');
 }
@@ -87,7 +87,31 @@ assert(todayShell.includes('topbar-actions'),'header controls missing layout hoo
 assert(todayShell.includes('id="global-date"'),'date field missing');
 assert(!todayShell.includes('class="avatar"'),'decorative lock still visible');
 assert(todayShell.includes('class="page-content"'),'page wrapper missing');
-assert(vm.runInContext('viewToday()',ctx).includes('today-priority-grid'),'Today spacing missing');
+
+const balanced=vm.runInContext('viewToday()',ctx);
+assert(balanced.includes('today-next')&&balanced.includes('today-quick-actions'),'balanced dashboard missing');
+assert(!balanced.includes('today-priority-grid'),'old dashboard layout still present');
+assert.equal(vm.runInContext('spaceForPage("nutrition")',ctx),'health','health grouping broken');
+assert.equal(vm.runInContext('spaceForPage("english")',ctx),'progress','progress grouping broken');
+assert.equal(vm.runInContext('spaceForPage("sleep")',ctx),'life','life grouping broken');
+vm.runInContext("state.page='today'",ctx);
+const rootShell=vm.runInContext('pageShell(viewToday())',ctx);
+assert(!rootShell.includes('class="section-breadcrumb"'),'hub roots should not display breadcrumbs');
+vm.runInContext("state.page='nutrition'",ctx);
+const nestedShell=vm.runInContext('pageShell(viewNutrition())',ctx);
+assert(nestedShell.includes('class="section-breadcrumb"'),'missing breadcrumb from nested page');
+assert(nestedShell.includes('data-nav="health"'),'health breadcrumb does not navigate to its hub');
+assert(nestedShell.includes('aria-current="location"'),'mobile parent tab must indicate current section');
+vm.runInContext("state.page='health'",ctx);
+assert(!vm.runInContext('pageShell(viewHealth())',ctx).includes('class="section-breadcrumb"'),'health hub should not have a parent breadcrumb');
+vm.runInContext("state.page='today'",ctx);
+assert(text('styles.css').includes('@media(max-width:440px)'),'narrow-screen header layout is missing');
+const balancedShell=vm.runInContext('pageShell(viewToday())',ctx);
+for(const section of ['today','progress','health','life','more'])assert(balancedShell.includes('data-nav="'+section+'"'),'missing nav tab '+section);
+const allSections=vm.runInContext('viewMore()',ctx);
+for(const page of ['learning','english','business','review','smoking','workout','nutrition','body','spiritual','routine','sleep','money','social','settings'])assert(allSections.includes('data-nav="'+page+'"'),'section inaccessible '+page);
+assert(vm.runInContext('viewProgress()',ctx).includes('أهدافك الحالية'),'goals moved out of reach');
+assert(text('styles.css').includes('.space-cards'),'hub layout missing');
 assert(text('styles.css').includes('khotwa-page-enter'),'entry animation missing');
 assert(text('styles.css').includes('prefers-reduced-motion:reduce'),'reduced motion not supported');
 // Accordion regression: keep geometry stable and preserve the current open/closed state on render.
@@ -218,5 +242,5 @@ let nu=vm.runInContext(`nutritionTotals([{data:{grams:200,calories:100,protein:5
 assert.equal(nu.calories,200);assert.equal(nu.protein,10);assert.equal(nu.carbs,40);
 for(const f of ['index.html','styles.css','toasts.js','experience.js','nutrition.js','smoking-insights.js','cloud-sync.js','quit-support.js','app.js','roadmap-data.js','sw.js','manifest.webmanifest','assets/icon-192.png','assets/icon-512.png'])assert(fs.existsSync(path.join(root,f)),`missing ${f}`);
 const m=JSON.parse(text('manifest.webmanifest'));assert(m.icons?.length>=2);
-console.log('✓ 16 views rendered, 144 learning units loaded, smoking/nutrition math correct, PWA assets present.');
+console.log('✓ 19 views rendered, 144 learning units loaded, smoking/nutrition math correct, PWA assets present.');
 console.log('Note: Browser-based visual/offline interaction testing must still be done after HTTPS deployment.');

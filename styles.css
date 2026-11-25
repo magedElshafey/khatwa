@@ -495,3 +495,84 @@ html{scrollbar-gutter:stable}
 .nutrition-custom-row .btn{padding:5px 10px;font-size:11px}
 .nutrition-custom-saved>small{display:block;color:var(--muted);font-size:10px;line-height:1.8;margin-bottom:12px}
 @media(max-width:480px){.nutrition-custom-row .nutrition-recent-chip{min-width:100%;justify-content:flex-start}.nutrition-custom-row .btn{min-height:35px}}
+
+
+/* UX Sprint 01 — Balanced Dashboard and progressive navigation */
+.skip-link{position:fixed;top:-100px;right:12px;z-index:300;background:var(--paper);color:var(--ink);padding:10px 15px;border:2px solid var(--mint);border-radius:10px}
+.skip-link:focus{top:12px}
+.nav-space-group{margin-bottom:4px}
+.nav-space{font-size:14px;min-height:45px}
+.side-subnav{margin:3px 15px 12px 0;padding-right:12px;border-right:1px solid var(--line)}
+.side-subnav .navitem{font-size:12px;padding:8px 12px;min-height:40px}
+.side-subnav .navitem .sym{font-size:15px}
+.balanced-today{max-width:960px}
+.today-greeting{margin-bottom:18px}
+.today-greeting .eyebrow{margin-bottom:4px}
+.today-greeting h2{font-size:clamp(20px,3vw,28px)}
+.today-greeting p{color:var(--muted);font-size:13px;margin-top:5px}
+.today-next{padding:24px;border-color:var(--mint);background:linear-gradient(115deg,var(--paper),var(--mint-light));box-shadow:none}
+.today-next-label{font-size:12px;font-weight:800;color:var(--mint);margin-bottom:9px}
+.today-next h3{font-size:clamp(18px,2vw,23px);line-height:1.5;overflow-wrap:anywhere}
+.today-next p{color:var(--muted);font-size:13px;margin-top:7px}
+.today-next-actions{margin-top:18px}
+.today-quick-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.today-quick-action{min-width:0;min-height:115px;display:flex;flex-direction:column;gap:3px;align-items:flex-start;text-align:right;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:16px;color:var(--ink)}
+.today-quick-action:hover,.space-card:hover{border-color:var(--mint);background:var(--mint-light)}
+.today-quick-symbol{color:var(--mint);font-size:21px;line-height:1.25;margin-bottom:5px}
+.today-quick-action strong{font-size:13px}
+.today-quick-action small{font-size:11px;color:var(--muted)}
+.today-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.today-summary-grid .card{box-shadow:none;padding:17px}
+.today-summary-grid .statnum{font-size:23px}
+.today-summary-grid .progress{margin-top:8px}
+.today-hint{font-size:11px;color:var(--muted);margin-top:18px}
+.today-hint .link-btn{font-size:11px}
+.space-section{margin-bottom:24px}
+.space-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.space-card{display:flex;align-items:center;gap:13px;min-height:94px;text-align:right;border:1px solid var(--line);border-radius:var(--radius);background:var(--paper);color:var(--ink);padding:17px;width:100%;min-width:0}
+.space-card-icon{display:grid;place-items:center;width:40px;height:40px;flex-shrink:0;border-radius:12px;background:var(--mint-light);color:var(--mint);font-weight:800}
+.space-card-copy{display:flex;flex:1;flex-direction:column;min-width:0;gap:3px}
+.space-card-copy strong{font-size:14px}
+.space-card-copy small{font-size:11px;color:var(--muted);line-height:1.55}
+.space-card-arrow{color:var(--mint);font-size:20px}
+.space-details{margin-top:18px}
+.space-details>summary{font-weight:800;cursor:pointer}
+.space-details>.grid{margin-top:15px}
+.space-details p{font-size:12px;color:var(--muted);margin-top:6px}
+.moremenu{display:grid}
+@media(max-width:760px){
+ .mobile-nav button{min-width:0;flex:1;min-height:49px;padding:5px 2px}
+ .mobile-nav button span{font-size:20px}
+ .content{padding-bottom:calc(105px + env(safe-area-inset-bottom))}
+ .space-cards{grid-template-columns:1fr}
+ .space-card{min-height:80px;padding:13px}
+ .today-next{padding:19px}
+ .today-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:420px){
+ .mobile-nav button{font-size:9px}
+ .today-quick-actions{gap:7px}
+ .today-quick-action{padding:12px 8px;min-height:95px}
+ .today-quick-action strong{font-size:12px}
+ .today-quick-action small{display:none}
+ .today-summary-grid .card{padding:12px}
+ .today-summary-grid .statnum{font-size:19px}
+}
+@media(prefers-reduced-motion:no-preference) and (hover:hover){
+ .today-quick-action,.space-card{transition:background-color .16s,border-color .16s}
+}
+
+
+/* UX Sprint 01 refinement — nested-page discoverability and narrow screens. */
+.section-breadcrumb{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin:-8px 0 17px;color:var(--muted);font-size:12px}
+.section-parent-link{background:transparent;border:0;color:var(--mint);font-weight:800;padding:5px 0;min-height:36px;display:inline-flex;align-items:center;gap:5px}
+.section-parent-link:hover{text-decoration:underline}
+.section-breadcrumb [aria-current="page"]{font-weight:700;color:var(--ink);overflow-wrap:anywhere}
+@media(max-width:440px){
+ .topbar{flex-direction:column;align-items:stretch;gap:12px}
+ .topbar-actions{justify-content:space-between;width:100%}
+ .topbar-actions .topdate{flex:1;min-width:0}
+ .topbar-actions .topdate input{width:100%;max-width:none}
+ .today-greeting{margin-bottom:15px}
+ .section-breadcrumb{margin-top:0}
+}
