@@ -561,3 +561,18 @@ html{scrollbar-gutter:stable}
 @media(prefers-reduced-motion:no-preference) and (hover:hover){
  .today-quick-action,.space-card{transition:background-color .16s,border-color .16s}
 }
+
+
+/* UX Sprint 01 refinement — nested-page discoverability and narrow screens. */
+.section-breadcrumb{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin:-8px 0 17px;color:var(--muted);font-size:12px}
+.section-parent-link{background:transparent;border:0;color:var(--mint);font-weight:800;padding:5px 0;min-height:36px;display:inline-flex;align-items:center;gap:5px}
+.section-parent-link:hover{text-decoration:underline}
+.section-breadcrumb [aria-current="page"]{font-weight:700;color:var(--ink);overflow-wrap:anywhere}
+@media(max-width:440px){
+ .topbar{flex-direction:column;align-items:stretch;gap:12px}
+ .topbar-actions{justify-content:space-between;width:100%}
+ .topbar-actions .topdate{flex:1;min-width:0}
+ .topbar-actions .topdate input{width:100%;max-width:none}
+ .today-greeting{margin-bottom:15px}
+ .section-breadcrumb{margin-top:0}
+}
