@@ -94,6 +94,18 @@ assert(!balanced.includes('today-priority-grid'),'old dashboard layout still pre
 assert.equal(vm.runInContext('spaceForPage("nutrition")',ctx),'health','health grouping broken');
 assert.equal(vm.runInContext('spaceForPage("english")',ctx),'progress','progress grouping broken');
 assert.equal(vm.runInContext('spaceForPage("sleep")',ctx),'life','life grouping broken');
+vm.runInContext("state.page='today'",ctx);
+const rootShell=vm.runInContext('pageShell(viewToday())',ctx);
+assert(!rootShell.includes('class="section-breadcrumb"'),'hub roots should not display breadcrumbs');
+vm.runInContext("state.page='nutrition'",ctx);
+const nestedShell=vm.runInContext('pageShell(viewNutrition())',ctx);
+assert(nestedShell.includes('class="section-breadcrumb"'),'missing breadcrumb from nested page');
+assert(nestedShell.includes('data-nav="health"'),'health breadcrumb does not navigate to its hub');
+assert(nestedShell.includes('aria-current="location"'),'mobile parent tab must indicate current section');
+vm.runInContext("state.page='health'",ctx);
+assert(!vm.runInContext('pageShell(viewHealth())',ctx).includes('class="section-breadcrumb"'),'health hub should not have a parent breadcrumb');
+vm.runInContext("state.page='today'",ctx);
+assert(text('styles.css').includes('@media(max-width:440px)'),'narrow-screen header layout is missing');
 const balancedShell=vm.runInContext('pageShell(viewToday())',ctx);
 for(const section of ['today','progress','health','life','more'])assert(balancedShell.includes('data-nav="'+section+'"'),'missing nav tab '+section);
 const allSections=vm.runInContext('viewMore()',ctx);
