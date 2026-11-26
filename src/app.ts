@@ -1,7 +1,7 @@
 /* خطوة — Local-first personal dashboard. No network writes, telemetry, or automatic task completion. */
 interface LifeRow { id:string; collection:string; date:string; data:any; updatedAt:string; }
 interface SleepStep { id:string; label:string; }
-interface LifeSettings { displayName:string; weeklyEngineering:number; weeklyBusiness:number; englishDaily:number; goals:string[]; smoking?:{avg:number;packSize:number;packPrice:number;start:string;quitAt?:string}; routine:string[]; sleepRoutine?:SleepStep[]; quitReasons?:string[]; }
+interface LifeSettings { displayName:string; weeklyEngineering:number; weeklyBusiness:number; englishDaily:number; goals:string[]; smoking?:{avg:number;packSize:number;packPrice:number;start:string;quitAt?:string}; routine:string[]; sleepRoutine?:SleepStep[]; quitReasons?:string[]; favoritePages?:string[]; }
 interface LifeState { page:string; date:string; phase:number; db:IDBDatabase|null; rows:LifeRow[]; settings:LifeSettings; }
 interface Window { LIFE_OS_ROADMAP:any; KhotwaExperience:any; KhotwaNutrition:any; KhotwaSmokeInsights:any; KhotwaCloud:any; KhatwaToast:any; KhatwaQuit:any }
 const defaultSleepSteps:SleepStep[]=[
@@ -11,7 +11,7 @@ const defaultSleepSteps:SleepStep[]=[
 {id:'quiet',label:'اقرأ صفحتين خفاف أو اعمل أذكار النوم (3 دقايق)'},
 {id:'breath',label:'دقيقتين هدوء وتنفس طبيعي من غير شاشة'}
 ];
-const defaults:LifeSettings={displayName:'',weeklyEngineering:210,weeklyBusiness:90,englishDaily:10,goals:['أذاكر وأطبق بإيدي','أتحسن في الإنجليزي يوميًا','أبني دخل مستقل بالتدريج'],routine:['كوباية مياه بعد الصحيان','حركة خفيفة أو تمطّط دقيقتين','أحدد أهم حاجة واحدة لليوم','أجهز لبداية هادية من غير سوشيال ميديا'],sleepRoutine:defaultSleepSteps};
+const defaults:LifeSettings={displayName:'',weeklyEngineering:210,weeklyBusiness:90,englishDaily:10,goals:['أذاكر وأطبق بإيدي','أتحسن في الإنجليزي يوميًا','أبني دخل مستقل بالتدريج'],routine:['كوباية مياه بعد الصحيان','حركة خفيفة أو تمطّط دقيقتين','أحدد أهم حاجة واحدة لليوم','أجهز لبداية هادية من غير سوشيال ميديا'],sleepRoutine:defaultSleepSteps,favoritePages:['nutrition','workout','spiritual']};
 const state:LifeState={page:'today',date:new Date().toLocaleDateString('en-CA'),phase:1,db:null,rows:[],settings:{...defaults}};
 const pageInfo:Record<string,[string,string,string]>= {
  today:['النهارده','نظرة واحدة لكل اللي يهمك من غير زحمة','⌂'],
@@ -124,11 +124,27 @@ if(accordionState.size){holder.querySelectorAll<HTMLDetailsElement>('details[dat
 if(lastRenderedPage!==state.page){holder.querySelector?.('.page-content')?.classList.add('page-enter');}
 lastRenderedPage=state.page;}
 function go(p:string){if(p!=='smoking')smokeEditing=false;state.page=p;render();window.scrollTo({top:0,behavior:'instant' as ScrollBehavior});}
-function spaceCards(space:NavSpace):string {
- return `<div class="grid space-cards">${space.pages.map(p=>`<button type="button" class="space-card" data-nav="${p}"><span class="space-card-icon" aria-hidden="true">${pageInfo[p][2]}</span><span class="space-card-copy"><strong>${E(pageInfo[p][0])}</strong><small>${E(pageInfo[p][1])}</small></span><span class="space-card-arrow" aria-hidden="true">←</span></button>`).join('')}</div>`;
+const favoriteLimit=3;
+function selectedFavorites():string[] {
+ const saved=state.settings.favoritePages,defaults=['nutrition','workout','spiritual'];
+ const valid=navSpaces.flatMap(space=>space.pages),list=Array.isArray(saved)?saved:defaults;
+ return list.filter((p,i)=>typeof p==='string'&&valid.includes(p)&&list.indexOf(p)===i).slice(0,favoriteLimit);
 }
+function nextFavorites(page:string):string[]|null {
+ if(!navSpaces.some(space=>space.pages.includes(page)))return null;
+ const current=selectedFavorites();
+ return current.includes(page)?current.filter(p=>p!==page):current.length<favoriteLimit?[...current,page]:null;
+}
+function spaceCards(space:NavSpace):string {
+ const favorites=selectedFavorites();
+ return `<div class="grid space-cards">${space.pages.map(p=>{
+  const starred=favorites.includes(p);
+  return `<div class="space-card-wrap"><button type="button" class="space-card" data-nav="${p}"><span class="space-card-icon" aria-hidden="true">${pageInfo[p][2]}</span><span class="space-card-copy"><strong>${E(pageInfo[p][0])}</strong><small>${E(pageInfo[p][1])}</small></span></button><button type="button" class="favorite-toggle ${starred?'active':''}" data-action="toggle-favorite" data-page="${p}" aria-label="${starred?'إزالة من اختصارات النهارده':'إضافة لاختصارات النهارده'}: ${E(pageInfo[p][0])}" aria-pressed="${starred}"><span aria-hidden="true">${starred?'★':'☆'}</span></button></div>`;
+ }).join('')}</div>`;
+}
+
 function viewMore():string {
- return `<div class="pageintro"><p>كل أقسام خطوة في مكان واحد. تقدر تفتح أي قسم أو ترجعله وقت ما تحتاج.</p></div>${navSpaces.filter(x=>x.pages.length).map(space=>`<section class="space-section"><div class="sectiontitle"><h2>${E(space.label)}</h2></div>${spaceCards(space)}</section>`).join('')}`;
+ return `<div class="pageintro"><p>كل أقسام خطوة في مكان واحد. اضغط على النجمة جنب أي قسم عشان يظهر ضمن اختصارات النهارده (حد أقصى ٣). التغيير بيتحفظ في إعدادات حسابك.</p></div>${navSpaces.filter(x=>x.pages.length).map(space=>`<section class="space-section"><div class="sectiontitle"><h2>${E(space.label)}</h2></div>${spaceCards(space)}</section>`).join('')}`;
 }
 function viewProgress():string {
  const total=allSessions().length,done=completedSessions();
