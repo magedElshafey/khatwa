@@ -1,5 +1,5 @@
 /* Keep application assets available offline, while checking for new releases online. */
-const CACHE_NAME = 'khotwa-pwa-v18-ux-consistency';
+const CACHE_NAME = 'khotwa-pwa-v19-favorites';
 const APP_SHELL = [
   './', './index.html', './styles.css', './app.js', './toasts.js', './experience.js', './nutrition.js', './smoking-insights.js', './cloud-sync.js', './quit-support.js', './roadmap-data.js',
   './manifest.webmanifest', './assets/icon.svg', './assets/icon-192.png', './assets/icon-512.png'
