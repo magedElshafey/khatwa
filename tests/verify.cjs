@@ -15,6 +15,32 @@ for(const fn of ['viewToday','viewProgress','viewHealth','viewLife','viewLearnin
  let rendered=vm.runInContext(fn+'()',ctx);
  assert.equal(typeof rendered,'string');assert(rendered.length>300,fn+' rendered too little');
 }
+
+// UX Sprint 03 — representative records verify that historical data remains available
+// behind optional disclosures without changing storage or calculation behavior.
+vm.runInContext(`state.rows=state.rows.concat([
+  {id:'ux-s3-english',collection:'english',date:'2026-11-22',data:{skill:'Speaking',minutes:10},updatedAt:''},
+  {id:'ux-s3-finance',collection:'finance',date:'2026-11-22',data:{name:'Demo',type:'expense',amount:30},updatedAt:''},
+  {id:'ux-s3-social',collection:'social',date:'2026-11-22',data:{name:'Demo',minutes:5},updatedAt:''},
+  {id:'ux-s3-body',collection:'body',date:'2026-11-22',data:{weight:80},updatedAt:''}
+])`,ctx);
+for(const [fn,id] of [
+  ['viewEnglish','english-history'],
+  ['viewMoney','money-history'],
+  ['viewSocial','social-history'],
+  ['viewBody','body-history'],
+  ['viewReview','review-report']
+]){
+ const html=vm.runInContext(fn+'()',ctx);
+ assert(html.includes('data-accordion-id="'+id+'"'),fn+' historical content must be discoverable');
+ assert(html.includes('<summary>'),fn+' must give the disclosure an accessible label');
+}
+assert(vm.runInContext('viewMoney()',ctx).includes('سجل الحركة'),'finance entry remains accessible');
+assert(vm.runInContext('viewEnglish()',ctx).includes('data-form="english"'),'English form remains accessible');
+assert(vm.runInContext('viewBody()',ctx).includes('data-form="body"'),'measurement entry remains accessible');
+vm.runInContext("state.rows=state.rows.filter(x=>!x.id.startsWith('ux-s3-'))",ctx);
+assert(text('styles.css').includes('UX Sprint 03'),'module consistency rules missing');
+
 assert.equal(vm.runInContext('allSessions().length',ctx),144,'roadmap sessions changed');
 // Appearance regression checks: default theme, interactive toggle, local preference and unchanged records.
 assert(text('index.html').includes('data-theme="dark"'));

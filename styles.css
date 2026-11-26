@@ -604,3 +604,34 @@ html{scrollbar-gutter:stable}
  .ux-disclosure>summary{min-height:48px;padding:12px}
  .ux-secondary>.grid{margin:12px}
 }
+
+
+/* UX Sprint 03 — consistent presentation across existing modules. */
+.content .ux-history{margin-top:0}
+.content .ux-history-body{padding:15px 17px 18px;min-width:0}
+.content .ux-history-body>.item:first-child{margin-top:0}
+.content .ux-history-body>.item:last-child{margin-bottom:0}
+.content .ux-history-body .photos{margin-top:12px}
+.content .ux-history-body .sectiontitle{margin-top:17px}
+.content .ux-history-body .summarybox{max-height:360px;overflow:auto}
+.content .sectiontitle{scroll-margin-top:22px}
+.content .card,.content .feature,.content .item{overflow-wrap:anywhere}
+.content .cardhead{flex-wrap:wrap}
+.content .formactions>.btn{min-height:42px}
+.content .field :is(input:not([type="checkbox"]),select,textarea){min-height:44px}
+.content :is(.navitem,.space-card,.today-quick-action,.ux-disclosure>summary){-webkit-tap-highlight-color:transparent}
+@media(max-width:760px){
+ .content .ux-history-body{padding:12px}
+ .content .ux-history-body .item{flex-wrap:wrap}
+ .content .ux-history-body .iteminfo{min-width:160px}
+ .content .ux-history-body .tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+ .content .formactions>.btn{min-height:44px}
+ .content .cardhead{gap:8px}
+ .content .hero-deco{display:none}
+ .content .hero{padding:20px 16px}
+}
+@media(max-width:420px){
+ .content .ux-history-body .item{gap:8px}
+ .content .ux-history-body .iteminfo{min-width:100%;flex-basis:100%}
+ .content .ux-history-body .btn.sm{min-height:38px}
+}
