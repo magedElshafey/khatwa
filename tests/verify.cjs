@@ -118,6 +118,31 @@ assert(todayShell.includes('id="global-date"'),'date field missing');
 assert(!todayShell.includes('class="avatar"'),'decorative lock still visible');
 assert(todayShell.includes('class="page-content"'),'page wrapper missing');
 
+
+// UX Sprint 04 — defaults, personalization, uniqueness, maximum and empty state.
+const shortcutsBefore=vm.runInContext('selectedFavorites()',ctx);
+assert.equal(shortcutsBefore.length,3,'default shortcuts should have three entries');
+assert(shortcutsBefore.includes('nutrition')&&shortcutsBefore.includes('workout')&&shortcutsBefore.includes('spiritual'),'default shortcuts should serve daily logging');
+assert(vm.runInContext('viewToday()',ctx).includes('data-action="open-quick" data-page="nutrition"'),'nutrition action not discoverable');
+assert(vm.runInContext('viewToday()',ctx).includes('data-action="open-quick" data-page="spiritual"'),'steps action not discoverable');
+assert.equal(vm.runInContext('nextFavorites("english")',ctx),null,'favorites should respect the three-item maximum');
+assert.equal(vm.runInContext('nextFavorites("nutrition").length',ctx),2,'favorites must support removal');
+assert.equal(vm.runInContext('nextFavorites("invalid-section")',ctx),null,'unknown sections cannot be favorited');
+const hubFavorites=vm.runInContext('viewHealth()',ctx);
+assert(hubFavorites.includes('data-action="toggle-favorite"'),'favorite controls missing from section cards');
+assert(hubFavorites.includes('aria-pressed="true"'),'favorite toggle requires an accessible pressed state');
+vm.runInContext("state.settings.favoritePages=['english','money']",ctx);
+const personalized=vm.runInContext('viewToday()',ctx);
+assert(personalized.includes('data-action="open-quick" data-page="english"'),'custom English shortcut missing');
+assert(personalized.includes('data-action="open-quick" data-page="money"'),'custom Finance shortcut missing');
+assert(!personalized.includes('data-action="open-quick" data-page="nutrition"'),'old default must not override saved shortcuts');
+vm.runInContext("state.settings.favoritePages=[]",ctx);
+assert(vm.runInContext('viewToday()',ctx).includes('today-favorites-empty'),'empty favorites must have a useful fallback');
+vm.runInContext("state.settings.favoritePages=['english','english','invalid-section']",ctx);
+assert.equal(vm.runInContext('selectedFavorites().length',ctx),1,'invalid or duplicate favorites must be ignored');
+vm.runInContext("state.settings.favoritePages=['nutrition','workout','spiritual']",ctx);
+assert(text('styles.css').includes('.favorite-toggle:focus-visible'),'favorite controls need visible keyboard focus');
+
 const balanced=vm.runInContext('viewToday()',ctx);
 assert(balanced.includes('today-next')&&balanced.includes('today-quick-actions'),'balanced dashboard missing');
 assert(!balanced.includes('today-priority-grid'),'old dashboard layout still present');

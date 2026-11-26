@@ -635,3 +635,17 @@ html{scrollbar-gutter:stable}
  .content .ux-history-body .iteminfo{min-width:100%;flex-basis:100%}
  .content .ux-history-body .btn.sm{min-height:38px}
 }
+
+
+/* UX Sprint 04 — personal shortcuts with independent, accessible star buttons. */
+.space-card-wrap{min-width:0;position:relative}
+.space-card-wrap>.space-card{height:100%;padding-inline-end:63px}
+.favorite-toggle{position:absolute;inset-inline-end:10px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:44px;height:44px;border:1px solid var(--line);border-radius:12px;background:var(--paper);color:var(--muted);font-size:22px;line-height:1}
+.favorite-toggle.active{background:var(--mint-light);border-color:var(--mint);color:var(--mint)}
+.favorite-toggle:hover{border-color:var(--mint);color:var(--mint)}
+.favorite-toggle:focus-visible{outline:3px solid #87b5f1;outline-offset:2px}
+.today-favorites-empty{grid-column:1/-1;display:flex;align-items:center;min-height:80px;padding:14px;border:1px dashed var(--line);border-radius:var(--radius);color:var(--muted);font-size:12px;background:var(--paper)}
+@media(max-width:420px){
+ .space-card-wrap>.space-card{padding-inline-end:62px}
+ .favorite-toggle{inset-inline-end:8px}
+}
