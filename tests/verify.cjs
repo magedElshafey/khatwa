@@ -75,6 +75,10 @@ assert(nutrition.localMatches('رز بسمتي').some(x=>x.id==='ref:basmati'),'
 assert.equal(nutrition.validateBarcode('٣٠١٧٦٢٠٤٢٢٠٠٣'),'3017620422003','Arabic barcode digits should normalize');
 const nutritionHtml=vm.runInContext('viewNutrition()',ctx);
 assert(nutritionHtml.includes('nutrition-food-search')&&nutritionHtml.includes('الإفطار'),'nutrition UI unavailable');
+assert(nutritionHtml.includes('nutrition-jump-nav')&&nutritionHtml.includes('id="nutrition-diary-heading"'),'nutrition quick section links missing');
+assert(nutritionHtml.includes('data-accordion-id="nutrition-macros"'),'macro breakdown should be collapsible');
+assert(nutritionHtml.includes('nutrition-add-heading'),'nutrition entry must remain discoverable');
+
 assert(nutritionHtml.includes('data-form="nutrition-custom"'),'custom food form missing');
 assert(nutritionHtml.includes('data-form="nutrition-barcode"'),'barcode form missing');
 assert(nutritionHtml.includes('nutrition-barcode-photo'),'photo barcode input missing');
@@ -119,6 +123,11 @@ assert(text('styles.css').includes('scrollbar-gutter:stable'),'scrollbar can shi
 assert(text('styles.css').includes('border-bottom:1px solid transparent'),'summary border is not reserved');
 assert(text('styles.css').includes('.sprint>summary::marker'),'native details marker is not normalized');
 assert(vm.runInContext('viewLearning()',ctx).includes('data-accordion-id="learning-'),'learning accordion IDs missing');
+const learningSprint02=vm.runInContext('viewLearning()',ctx);
+assert(learningSprint02.includes('ux-jump-nav')&&learningSprint02.includes('id="learning-sprints"'),'learning navigation landmarks missing');
+assert(learningSprint02.includes('data-accordion-id="learning-criteria"'),'learning exit criteria disclosure missing');
+assert(learningSprint02.includes('data-accordion-id="learning-later"'),'learning optional content must be collapsible');
+
 assert(vm.runInContext('viewBusiness()',ctx).includes('data-accordion-id="business-'),'business accordion IDs missing');
 const cloudForAccordion=ctx.window.KhotwaCloud;
 cloudForAccordion.isReady=()=>true;cloudForAccordion.isAuthenticated=()=>true;cloudForAccordion.isPrepared=()=>true;
@@ -222,6 +231,11 @@ assert(text('sw.js').includes("'./smoking-insights.js'"),'PWA must cache smoking
 let smokingScreen=vm.runInContext("state.settings.smoking={avg:20,packSize:20,packPrice:100,start:'2026-11-20',quitAt:'2026-11-20T09:00'};smokeEditing=false;viewSmoking()",ctx);
 assert(smokingScreen.includes('رحلة مبنية على العلم'),'health section missing from smoking screen');
 assert(smokingScreen.includes('بافتراض إنك ما دخّنتش'),'potential estimate must include disclaimer');
+assert(smokingScreen.includes('id="smoke-log"'),'smoking entry needs jump destination');
+assert(smokingScreen.includes('data-accordion-id="smoking-savings"'),'optional savings disclosure missing');
+assert(smokingScreen.includes('data-accordion-id="smoking-history"'),'smoking history should be collapsible');
+assert(smokingScreen.includes('data-form="smoke"'),'daily smoking record still needs a form');
+
 
 // Cloud remains off until the user enables synchronization after signing in.
 assert.equal(ctx.window.KhotwaCloud.isActive(),false,'Cloud sync must be opt-in');

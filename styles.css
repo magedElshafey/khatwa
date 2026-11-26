@@ -576,3 +576,31 @@ html{scrollbar-gutter:stable}
  .today-greeting{margin-bottom:15px}
  .section-breadcrumb{margin-top:0}
 }
+
+
+/* UX Sprint 02 — progressively disclose secondary information. */
+.ux-jump-nav{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 18px}
+.ux-jump-nav a{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:7px 13px;border:1px solid var(--line);border-radius:999px;background:var(--paper);color:var(--ink);font-size:12px;font-weight:700;line-height:1.4;text-align:center}
+.ux-jump-nav a:hover{border-color:var(--mint);background:var(--mint-light);color:var(--ink);text-decoration:none}
+.ux-disclosure{min-width:0;border:1px solid var(--line);border-radius:var(--radius);background:var(--paper);padding:0;margin:16px 0;overflow:hidden}
+.ux-disclosure>summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:50px;padding:13px 17px;color:var(--ink);font-size:14px;font-weight:800}
+.ux-disclosure>summary::-webkit-details-marker{display:none}
+.ux-disclosure>summary::after{content:"＋";font-size:19px;color:var(--mint);font-weight:700;flex:none;line-height:1}
+.ux-disclosure[open]>summary::after{content:"−"}
+.ux-disclosure[open]>summary{border-bottom:1px solid var(--line)}
+.ux-disclosure-hint{font-weight:400;font-size:11px;color:var(--muted);margin-inline-start:auto}
+.ux-disclosure>.grid,.ux-disclosure>.stack,.ux-disclosure>.taglist,.ux-disclosure>.notice{margin:14px 16px 17px}
+.ux-disclosure>.nutrition-distribution{margin:13px}
+.ux-learning-criteria{margin-top:15px}
+.ux-learning-criteria .pill{margin-inline-start:auto}
+.ux-secondary{padding:0}
+.ux-secondary>.grid{margin:16px}
+.ux-secondary>.card,.ux-secondary>.empty{margin:14px 16px}
+.ux-secondary .tablewrap{max-width:100%;overflow-x:auto}
+#learning-phase-info,#learning-sprints,#smoke-log,#smoke-history,#smoke-savings,#nutrition-add-heading,#nutrition-diary-heading,#nutrition-macro-details{scroll-margin-top:22px}
+@media(max-width:760px){
+ .ux-jump-nav{flex-wrap:nowrap;overflow-x:auto;padding:0 1px 5px;scrollbar-width:thin}
+ .ux-jump-nav a{white-space:nowrap;flex-shrink:0}
+ .ux-disclosure>summary{min-height:48px;padding:12px}
+ .ux-secondary>.grid{margin:12px}
+}
