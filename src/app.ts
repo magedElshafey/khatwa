@@ -166,20 +166,36 @@ function viewLife():string {
 }
 function viewToday():string {
  const session=nextSession();
- const english=row('english-'+state.date),routine=row('routine-'+state.date);
+ 
  const workoutEntries=onDate('workout').length;
  const stepCount=row('steps-'+state.date)?.data?.count;
  const total=allSessions().length,done=completedSessions();
  const primary=session?action('افتح الجلسة','open-session',`data-key="${E(session.key)}"`,'btn primary'):action('راجع تقدمك','nav','data-page="progress"','btn primary');
- const quick=[
-  {page:'english',symbol:'Aa',title:'الإنجليزي',subtitle:english?'ممارستك مسجلة النهارده':'سجّل ممارستك'},
-  {page:'workout',symbol:'♢',title:'التمرين',subtitle:workoutEntries?`${F(workoutEntries)} مجموعة النهارده`:'افتح سجل التمرين'},
-  {page:'routine',symbol:'☀',title:'روتين الصبح',subtitle:routine?'فيه تسجيل للنهارده':'تابع روتينك'}
- ];
- return `<div class="balanced-today">
+ const descriptions:Record<string,string>={
+ nutrition:'أضف صنف أو وجبة',
+ workout:workoutEntries?`${F(workoutEntries)} مجموعة مسجلة النهارده`:'سجّل تمرينك',
+ spiritual:stepCount==null?'سجّل عدد خطواتك':'حدّث خطواتك',
+ learning:'كمّل الجلسة الجاية',
+ english:row('english-'+state.date)?'شوف ممارستك النهارده':'سجّل ممارسة',
+ business:'تابع خطوات الدخل المستقل',
+ smoking:'افتح المتابعة',
+ body:'القياسات المسجلة',
+ routine:'تابع روتين الصبح',
+ sleep:'روتين قبل النوم',
+ money:'سجّل حركة مالية',
+ social:'تابع استخدام التطبيقات',
+ review:'راجع الأسبوع',
+ settings:'عدّل إعداداتك'
+};
+const quick=selectedFavorites().map(page=>({
+ page,symbol:pageInfo[page][2],
+ title:page==='spiritual'?'الخطوات والعادات':pageInfo[page][0],
+ subtitle:descriptions[page]||pageInfo[page][1]
+}));;
+return `<div class="balanced-today">
  <header class="today-greeting"><span class="eyebrow">خطوة بخطوة</span><h2>${state.settings.displayName?'أهلًا، '+E(state.settings.displayName):'أهلًا بيك في مساحتك'}</h2><p>ركّز على خطوة واحدة، والباقي هتلاقيه في الأقسام.</p></header>
  <section class="card today-next" aria-labelledby="today-next-title"><div class="today-next-label">خطوتك الجاية</div><h3 id="today-next-title">${session?E(session.title):'خلصت الجلسات المسجلة في المسار'}</h3><p>${session?'ابدأ الجلسة الجاية وارجع سجّل اللي اتعلمته.':'راجع معايير الانتقال ونتائجك في صفحة التقدم.'}</p><div class="today-next-actions">${primary}</div></section>
- <section aria-labelledby="today-quick-title"><div class="sectiontitle"><h2 id="today-quick-title">إجراءات سريعة</h2></div><div class="today-quick-actions">${quick.map(item=>`<button type="button" class="today-quick-action" data-nav="${item.page}"><span class="today-quick-symbol" aria-hidden="true">${item.symbol}</span><strong>${E(item.title)}</strong><small>${E(item.subtitle)}</small></button>`).join('')}</div></section>
+ <section aria-labelledby="today-quick-title"><div class="sectiontitle"><h2 id="today-quick-title">اختصاراتك</h2>${action('تخصيص','nav','data-page="more"','btn sm')}</div><div class="today-quick-actions">${quick.map(item=>`<button type="button" class="today-quick-action" data-action="open-quick" data-page="${item.page}"><span class="today-quick-symbol" aria-hidden="true">${item.symbol}</span><strong>${E(item.title)}</strong><small>${E(item.subtitle)}</small></button>`).join('')||'<div class="today-favorites-empty">اختار اختصاراتك المفضلة من صفحة كل الأقسام.</div>'}</div></section>
  <section aria-labelledby="today-summary-title"><div class="sectiontitle"><h2 id="today-summary-title">ملخص بسيط</h2>${action('التفاصيل','nav','data-page="progress"','btn sm')}</div><div class="grid today-summary-grid"><div class="card"><div class="statlabel">التعلم المكتمل</div><div class="statnum statcolor">${F(done)} / ${F(total)}</div>${bar(done,total)}</div><div class="card"><div class="statlabel">عادة ٨٬٠٠٠ خطوة</div><div class="statnum">${stepCount==null?'—':F(n(stepCount))}</div><div class="statmeta">${stepCount==null?'لسه مفيش عدد خطوات مسجل':'خطوة مسجلة في اليوم المختار'}</div>${action('سجّل الخطوات','nav','data-page="spiritual"','btn sm')}</div></div></section>
  <p class="today-hint">الأيام اللي ما سجلتش فيها مش بتتحسب إنجاز أو فشل. <button type="button" data-nav="more" class="link-btn">كل الأقسام</button></p>
  </div>`;
@@ -305,6 +321,22 @@ if(a?.startsWith('cloud-')){await window.KhotwaCloud.action(a);return;}
 if(a?.startsWith('nutrition-')){await window.KhotwaNutrition.action(a,el,e.target);return;}
 if(a==='toggle-theme'){changeTheme();return;}
 if(a==='nav'){go(el.dataset.page||'today');return;}
+if(a==='open-quick'){
+ const target=el.dataset.page||'';
+ if(!navSpaces.some(space=>space.pages.includes(target)))return;
+ go(target);
+ const focusId=target==='nutrition'?'nutrition-food-search':target==='spiritual'?'steps-count':'';
+ if(focusId)document.getElementById(focusId)?.focus();
+ return;
+}
+if(a==='toggle-favorite'){
+ const target=el.dataset.page||'',next=nextFavorites(target);
+ if(!next){notice('تقدر تختار لحد ٣ اختصارات. شيل واحد الأول لو حابب تغيّر.','warning');return;}
+ await saveSettings({...state.settings,favoritePages:next});
+ render();
+ notice(next.includes(target)?'اتضاف الاختصار للنهارده.':'اتشال الاختصار من النهارده.');
+ return;
+}
 if(a==='workout-view'){window.KhotwaExperience.setView(el.dataset.view);render();return;}
 if(a==='workout-metric'){window.KhotwaExperience.setMetric(el.dataset.metric);render();return;}
 if(a==='workout-page'){window.KhotwaExperience.movePage(el.dataset.page);render();return;}
